@@ -12,7 +12,7 @@ app.security.admin.password=CAMBIA_ESTA_PASSWORD
 app.security.seller.username=empleado1
 app.security.seller.password=CAMBIA_ESTA_PASSWORD
 
-#  3. INTELIGENCIA ARTIFICIAL (Gemini) 
+#  3. INTELIGENCIA ARTIFICIAL (Gemini)
 # Genera tu key en https://aistudio.google.com/apikey y pégala aquí.
 gemini.api.key=PEGA_AQUI_TU_API_KEY
 
@@ -33,7 +33,7 @@ app.cors.allowed-origins=http://127.0.0.1:5500,http://localhost:5500
 app.uploads.dir=uploads
 
 #  7. SUBIDA DE ARCHIVOS (fotos de producto) 
-# Por defecto Spring limita a 1 MB, pero las fotos de celular pesan 2-5 MB.
+# Por dfecto Spring limita a 1 MB, pero las fotos de celular pesan 2-5 MB.
 # Se sube el límite a 10 MB (el UploadController valida 6 MB por su cuenta).
 spring.servlet.multipart.max-file-size=12MB
 spring.servlet.multipart.max-request-size=12MB
