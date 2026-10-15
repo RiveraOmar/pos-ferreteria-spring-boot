@@ -1,0 +1,139 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+--  FERREPOS — TODOS LOS ÍNDICES DEL SISTEMA
+--  Ejecutar UNA VEZ en pgAdmin (Query Tool) sobre tu base "ferreteria" ya
+--  existente. Seguro de re-ejecutar (usa IF NOT EXISTS en todo).
+--
+--  Qué hace: acelera JOINs, búsquedas y filtros en TODA la aplicación —
+--  ventas, productos, clientes, deudas, facturación, compras y los 4
+--  catálogos (birlos, autopartes, filtros, baterías).
+--
+--  Por qué importa: sin estos índices, Postgres revisa la tabla COMPLETA
+--  cada vez que buscas un cliente por RFC, filtras ventas por fecha, o
+--  el sistema verifica si una venta ya tiene factura. Con pocos cientos
+--  de registros no se nota; con miles, cada clic empieza a sentirse lento.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+
+-- ═══ PRODUCTOS E INVENTARIO ═══════════════════════════════════════════════
+CREATE INDEX IF NOT EXISTS idx_products_category      ON products(category_id);
+CREATE INDEX IF NOT EXISTS idx_products_active        ON products(is_active);
+CREATE INDEX IF NOT EXISTS idx_products_barcode       ON products(barcode);
+CREATE INDEX IF NOT EXISTS idx_products_name          ON products(name);
+CREATE INDEX IF NOT EXISTS idx_products_attributes    ON products USING gin(attributes);
+CREATE INDEX IF NOT EXISTS idx_products_min_stock     ON products(min_stock_level);
+-- Búsqueda de texto en nombre/descripción (acelera el buscador "General")
+CREATE INDEX IF NOT EXISTS idx_products_desc_texto
+    ON products USING gin(to_tsvector('spanish', coalesce(description,'')));
+
+CREATE INDEX IF NOT EXISTS idx_inventory_product      ON inventory(product_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_stock        ON inventory(stock_actual);
+
+CREATE INDEX IF NOT EXISTS idx_product_images_product ON product_images(product_id);
+CREATE INDEX IF NOT EXISTS idx_price_history_product  ON price_history(product_id);
+
+
+-- ═══ PROVEEDORES ══════════════════════════════════════════════════════════
+CREATE INDEX IF NOT EXISTS idx_suppliers_name             ON suppliers(company_name);
+CREATE INDEX IF NOT EXISTS idx_suppliers_active           ON suppliers(active);
+CREATE INDEX IF NOT EXISTS idx_supplier_products_supplier ON supplier_products(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_supplier_products_product  ON supplier_products(product_id);
+
+
+-- ═══ CLIENTES ═════════════════════════════════════════════════════════════
+CREATE INDEX IF NOT EXISTS idx_customers_name   ON customers(full_name);
+CREATE INDEX IF NOT EXISTS idx_customers_rfc    ON customers(rfc);
+CREATE INDEX IF NOT EXISTS idx_customers_active ON customers(active);
+
+
+-- ═══ VENTAS (las tablas que más crecen — las más importantes de indexar) ═══
+CREATE INDEX IF NOT EXISTS idx_sales_customer       ON sales(customer_id);
+CREATE INDEX IF NOT EXISTS idx_sales_created_at     ON sales(created_at);
+CREATE INDEX IF NOT EXISTS idx_sales_status         ON sales(status);
+CREATE INDEX IF NOT EXISTS idx_sales_invoice_number ON sales(invoice_number);
+CREATE INDEX IF NOT EXISTS idx_sales_cfdi_global    ON sales(cfdi_global_id);
+-- Acelera específicamente "ventas pendientes de factura global" (se
+-- consulta todos los días a las 5 PM y cada vez que abres Facturación)
+CREATE INDEX IF NOT EXISTS idx_sales_pendiente_global
+    ON sales(incluido_factura_global) WHERE incluido_factura_global = FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_sale_items_sale    ON sale_items(sale_id);
+CREATE INDEX IF NOT EXISTS idx_sale_items_product ON sale_items(product_id);
+
+
+-- ═══ FACTURACIÓN CFDI ═════════════════════════════════════════════════════
+CREATE INDEX IF NOT EXISTS idx_cfdi_sale       ON cfdi_timbrados(sale_id);
+CREATE INDEX IF NOT EXISTS idx_cfdi_prefactura ON cfdi_timbrados(prefactura_id);
+CREATE INDEX IF NOT EXISTS idx_cfdi_status     ON cfdi_timbrados(status);
+CREATE INDEX IF NOT EXISTS idx_cfdi_fecha      ON cfdi_timbrados(fecha_timbrado);
+CREATE INDEX IF NOT EXISTS idx_cfdi_uuid       ON cfdi_timbrados(uuid);
+
+
+-- ═══ DEUDAS (fiado) ═══════════════════════════════════════════════════════
+CREATE INDEX IF NOT EXISTS idx_debts_customer    ON debts(customer_id);
+CREATE INDEX IF NOT EXISTS idx_debts_sale        ON debts(sale_id);
+CREATE INDEX IF NOT EXISTS idx_debts_status      ON debts(status);
+CREATE INDEX IF NOT EXISTS idx_debt_payments_debt ON debt_payments(debt_id);
+
+
+-- ═══ PRE-FACTURAS ═════════════════════════════════════════════════════════
+CREATE INDEX IF NOT EXISTS idx_prefacturas_customer  ON prefacturas(customer_id);
+CREATE INDEX IF NOT EXISTS idx_prefacturas_status    ON prefacturas(status);
+CREATE INDEX IF NOT EXISTS idx_prefactura_items_pref ON prefactura_items(prefactura_id);
+CREATE INDEX IF NOT EXISTS idx_prefactura_items_prod ON prefactura_items(product_id);
+
+
+-- ═══ COMPRAS A PROVEEDORES ════════════════════════════════════════════════
+CREATE INDEX IF NOT EXISTS idx_po_supplier    ON purchase_orders(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_po_status      ON purchase_orders(status);
+CREATE INDEX IF NOT EXISTS idx_po_created_at  ON purchase_orders(created_at);
+CREATE INDEX IF NOT EXISTS idx_po_items_order ON purchase_order_items(purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_po_items_product ON purchase_order_items(product_id);
+
+
+-- ═══ CATEGORÍAS (jerarquía padre/hijo) ════════════════════════════════════
+CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id);
+CREATE INDEX IF NOT EXISTS idx_categories_active ON categories(active);
+
+
+-- ═══ CATÁLOGO DE BIRLOS ═══════════════════════════════════════════════════
+CREATE INDEX IF NOT EXISTS idx_birlo_app_marca  ON catalogo_birlos_aplicaciones(marca);
+CREATE INDEX IF NOT EXISTS idx_birlo_app_codigo ON catalogo_birlos_aplicaciones(codigo);
+CREATE INDEX IF NOT EXISTS idx_birlo_estria_mm  ON catalogo_birlos(estria_mm);
+
+
+-- ═══ CATÁLOGO DE AUTOPARTES (bandas, bombas, tensores...) ═══════════════
+CREATE INDEX IF NOT EXISTS idx_auto_marca  ON catalogo_auto_aplicaciones(marca);
+CREATE INDEX IF NOT EXISTS idx_auto_modelo ON catalogo_auto_aplicaciones(modelo);
+CREATE INDEX IF NOT EXISTS idx_auto_parte  ON catalogo_auto_aplicaciones(parte);
+
+
+-- ═══ CATÁLOGO DE FILTROS (Gonher) ═════════════════════════════════════════
+CREATE INDEX IF NOT EXISTS idx_filtros_marca  ON catalogo_filtros(marca);
+CREATE INDEX IF NOT EXISTS idx_filtros_modelo ON catalogo_filtros(modelo);
+CREATE INDEX IF NOT EXISTS idx_filtros_tipo   ON catalogo_filtros(tipo);
+CREATE INDEX IF NOT EXISTS idx_filtros_anios  ON catalogo_filtros(anio_inicio, anio_fin);
+
+
+-- ═══ CATÁLOGO DE BATERÍAS ═════════════════════════════════════════════════
+CREATE INDEX IF NOT EXISTS idx_baterias_marca  ON catalogo_baterias(marca);
+CREATE INDEX IF NOT EXISTS idx_baterias_modelo ON catalogo_baterias(modelo);
+
+
+-- ═══ CATÁLOGOS SAT (CFDI 4.0) ═════════════════════════════════════════════
+-- El grande (52,500+ claves de producto/servicio): búsqueda de texto en
+-- español para cuando eliges la clave SAT al dar de alta un producto.
+CREATE INDEX IF NOT EXISTS idx_sat_prod_desc
+    ON sat_clave_prod_serv USING gin(to_tsvector('spanish', descripcion));
+CREATE INDEX IF NOT EXISTS idx_sat_unidad_nombre ON sat_clave_unidad(nombre);
+
+
+-- ═══ CARRITO (legado) ═════════════════════════════════════════════════════
+CREATE INDEX IF NOT EXISTS idx_cart_items_seller ON cart_items(seller_identifier);
+
+
+-- ═══ VERIFICACIÓN ═════════════════════════════════════════════════════════
+SELECT schemaname, tablename, COUNT(*) AS indices
+FROM pg_indexes
+WHERE schemaname = 'public'
+GROUP BY schemaname, tablename
+ORDER BY tablename;

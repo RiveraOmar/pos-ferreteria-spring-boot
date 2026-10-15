@@ -1,0 +1,9 @@
+c_ObjetoImp,Descripción
+01,No objeto de impuesto.
+02,Sí objeto de impuesto.
+03,Sí objeto del impuesto y no obligado al desglose.
+04,Sí objeto del impuesto y no causa impuesto.
+05,"Sí objeto del impuesto, IVA crédito PODEBI."
+06,"Sí objeto del IVA, No traslado IVA."
+07,"No traslado del IVA, Sí desglose IEPS."
+08,"No traslado del IVA, No desglose IEPS."

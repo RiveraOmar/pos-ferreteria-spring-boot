@@ -1,0 +1,714 @@
+CREATE TABLE categories (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    parent_id BIGINT REFERENCES categories(id), -- Para subcategorías
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE products (
+    id BIGSERIAL PRIMARY KEY,
+    sku VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    description TEXT,
+    category_id BIGINT REFERENCES categories(id),
+    
+    -- Precios: Usamos NUMERIC para precisión monetaria
+    list_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00, -- Precio venta
+    cost_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00, -- Precio real (numérico)
+    min_price  NUMERIC(12, 2) NOT NULL DEFAULT 0.00, -- Piso de descuento
+    
+    -- Atributos dinámicos (Clave para ferretería)
+    attributes JSONB DEFAULT '{}'::jsonb, 
+    
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE cart_items (
+    id BIGSERIAL PRIMARY KEY,
+    seller_identifier VARCHAR(50) NOT NULL, -- ID del vendedor o sesión
+    product_id BIGINT REFERENCES products(id),
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE inventory (
+    id BIGSERIAL PRIMARY KEY,
+    product_id BIGINT UNIQUE REFERENCES products(id) ON DELETE CASCADE,
+    stock_actual INTEGER NOT NULL DEFAULT 0,
+    stock_minimo INTEGER NOT NULL DEFAULT 5, -- Umbral para stock bajo
+    location_rack VARCHAR(50), -- Ejemplo: Pasillo A, Estante 4
+    last_restock TIMESTAMP WITH TIME ZONE
+);
+CREATE TABLE sales (
+    id BIGSERIAL PRIMARY KEY,
+    invoice_number VARCHAR(20) UNIQUE NOT NULL, -- Número de factura/ticket
+    total_amount NUMERIC(12, 2) NOT NULL,
+    tax_amount NUMERIC(12, 2) NOT NULL,
+    status VARCHAR(20) DEFAULT 'COMPLETED', -- COMPLETED, CANCELLED
+    seller_id VARCHAR(50), 
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE sale_items (
+    id BIGSERIAL PRIMARY KEY,
+    sale_id BIGINT REFERENCES sales(id),
+    product_id BIGINT REFERENCES products(id),
+    quantity INTEGER NOT NULL,
+    unit_price NUMERIC(12, 2) NOT NULL, -- Precio al que se vendió en ese momento
+    cost_at_sale NUMERIC(12, 2) NOT NULL  -- Costo codificado en ese momento (para reportes de utilidad)
+);
+
+-- Crear la tabla de clientes
+CREATE TABLE IF NOT EXISTS customers (
+    id SERIAL PRIMARY KEY,
+    full_name VARCHAR(150) NOT NULL,
+    rfc VARCHAR(13) UNIQUE, -- Identificación fiscal (ajustar longitud según país)
+    email VARCHAR(100),
+    phone_number VARCHAR(20),
+    address TEXT,
+    city VARCHAR(50),
+    
+    -- Tipo de cliente: 'GENERAL', 'MAYOREO', 'CONTRATISTA'
+    customer_type VARCHAR(20) DEFAULT 'GENERAL', 
+    
+    -- Para saber cuánto descuento base tiene este cliente
+    discount_rate DECIMAL(5,2) DEFAULT 0.00, 
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    active BOOLEAN DEFAULT TRUE
+);
+
+-- Insertar el cliente obligatorio por defecto
+INSERT INTO customers (full_name, rfc, customer_type, address) 
+VALUES ('Público General', 'XAXX010101000', 'GENERAL', 'Mostrador');
+
+-- Índices para búsquedas rápidas por nombre o RFC
+CREATE INDEX idx_customer_name ON customers(full_name);
+CREATE INDEX idx_customer_rfc ON customers(rfc);
+
+ALTER TABLE sales 
+ADD COLUMN customer_id INTEGER;
+
+-- Establecer la relación (Llave foránea)
+ALTER TABLE sales 
+ADD CONSTRAINT fk_sales_customer 
+FOREIGN KEY (customer_id) 
+REFERENCES customers (id);
+
+-- Opcional: Asignar todas las ventas existentes al cliente "Público General" (ID 1)
+UPDATE sales SET customer_id = 1 WHERE customer_id IS NULL;
+
+ALTER TABLE customers ALTER COLUMN id TYPE BIGINT;
+
+ALTER TABLE sales 
+ALTER COLUMN seller_id TYPE BIGINT USING seller_id::bigint;
+
+ALTER TABLE categories 
+ADD CONSTRAINT uk_category_name_parent UNIQUE (name, parent_id);
+
+ALTER TABLE products ADD COLUMN tax_rate NUMERIC(5, 4) DEFAULT 0.16;
+
+ALTER TABLE sale_items ADD COLUMN tax_amount_per_unit NUMERIC(12, 2) DEFAULT 0.00;
+ALTER TABLE sale_items ADD COLUMN total_tax_item NUMERIC(12, 2) DEFAULT 0.00;
+
+CREATE EXTENSION IF NOT EXISTS unaccent;
+
+ALTER TABLE categories ADD COLUMN active BOOLEAN DEFAULT TRUE;
+
+
+ALTER TABLE products ADD COLUMN min_stock_level INTEGER DEFAULT 1;
+CREATE TABLE price_history (
+    id BIGSERIAL PRIMARY KEY,
+    product_id BIGINT REFERENCES products(id),
+    old_price DECIMAL(19,2),
+    new_price DECIMAL(19,2),
+    change_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reason VARCHAR(255)
+);
+
+
+
+
+
+
+
+
+	INSERT INTO products (id, sku, name, description, list_price, cost_price, min_price, is_active, tax_rate)
+VALUES (-1, 'LIBRE', 'Producto Libre', 'Producto sin registro para ventas rápidas', 0.00, 0.00, 0.00, true, 0.16);
+
+INSERT INTO inventory (product_id, stock_actual, stock_minimo)
+VALUES (-1, 999999999, 0);
+
+
+
+
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_id     BIGINT REFERENCES customers(id);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS seller_name     VARCHAR(100);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method  VARCHAR(30) DEFAULT 'EFECTIVO';
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS amount_received NUMERIC(12,2);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS change_given    NUMERIC(12,2);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS cancelled_at    TIMESTAMP;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS cancel_reason   TEXT;
+UPDATE sales SET customer_id = seller_id WHERE customer_id IS NULL;
+ALTER TABLE sales 
+ALTER COLUMN customer_id TYPE BIGINT;
+
+
+
+ALTER TABLE products ADD COLUMN IF NOT EXISTS imagen_url TEXT;
+
+
+
+ALTER DATABASE ferreteria SET timezone TO 'America/Mazatlan';
+
+
+
+ 
+ALTER TABLE sale_items
+    ALTER COLUMN quantity TYPE NUMERIC(10,3);
+ 
+ 
+ALTER TABLE prefactura_items
+    ALTER COLUMN quantity TYPE NUMERIC(10,3);
+
+
+
+
+DROP VIEW IF EXISTS view_low_stock;
+
+
+
+
+ 
+ALTER TABLE inventory
+    ALTER COLUMN stock_actual TYPE NUMERIC(15,3),
+    ALTER COLUMN stock_minimo TYPE NUMERIC(15,3);
+
+
+ CREATE VIEW view_low_stock AS
+SELECT * FROM inventory WHERE stock_actual <= stock_minimo;
+
+ALTER TABLE products
+    ALTER COLUMN min_stock_level TYPE NUMERIC(15,3);
+
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- MÓDULO: PROVEEDORES Y ÓRDENES DE COMPRA
+-- Ejecutar en pgAdmin sobre la base de datos "ferreteria"
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- ─── PROVEEDORES ──────────────────────────────────────────────────────────────
+CREATE TABLE suppliers (
+    id              BIGSERIAL PRIMARY KEY,
+    company_name    VARCHAR(200) NOT NULL,
+    contact_name    VARCHAR(150),
+    phone_number    VARCHAR(10),
+    email           VARCHAR(200),
+    address         VARCHAR(300),
+    city            VARCHAR(100),
+    rfc             VARCHAR(13),
+    notes           TEXT,
+    active          BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at      TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- ─── RELACIÓN: qué productos compras a qué proveedor (y a qué costo) ─────────
+-- Permite saber "este clavo me lo vende Ferretera del Norte a $18, y también
+-- lo tiene Tornillos SA a $19.50" — útil para comparar antes de comprar.
+CREATE TABLE supplier_products (
+    id              BIGSERIAL PRIMARY KEY,
+    supplier_id     BIGINT NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,
+    product_id      BIGINT NOT NULL REFERENCES products(id)  ON DELETE CASCADE,
+    supplier_sku    VARCHAR(50),               -- código que usa el proveedor
+    last_cost       NUMERIC(12,2),             -- último costo pagado a este proveedor
+    last_purchase_at TIMESTAMP,
+    UNIQUE (supplier_id, product_id)
+);
+
+-- ─── ÓRDENES DE COMPRA (cabecera) ─────────────────────────────────────────────
+CREATE TABLE purchase_orders (
+    id              BIGSERIAL PRIMARY KEY,
+    supplier_id     BIGINT NOT NULL REFERENCES suppliers(id),
+    folio           VARCHAR(30) NOT NULL UNIQUE,
+    status          VARCHAR(20) NOT NULL DEFAULT 'RECIBIDA',
+                    -- RECIBIDA | CANCELADA  (simplificado: aquí solo registramos
+                    -- compras ya recibidas, no hacemos seguimiento de pedidos en tránsito)
+    subtotal        NUMERIC(12,2) NOT NULL DEFAULT 0,
+    tax_amount      NUMERIC(12,2) NOT NULL DEFAULT 0,
+    total           NUMERIC(12,2) NOT NULL DEFAULT 0,
+    invoice_number  VARCHAR(50),               -- folio de la factura del proveedor (opcional)
+    notes           TEXT,
+    created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+    cancelled_at    TIMESTAMP,
+    cancel_reason   TEXT
+);
+
+-- ─── ÓRDENES DE COMPRA (detalle / productos) ──────────────────────────────────
+CREATE TABLE purchase_order_items (
+    id                  BIGSERIAL PRIMARY KEY,
+    purchase_order_id   BIGINT NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+    product_id          BIGINT NOT NULL REFERENCES products(id),
+    product_name        VARCHAR(200) NOT NULL,   -- snapshot del nombre al momento de comprar
+    product_sku         VARCHAR(50),
+    quantity            NUMERIC(10,3) NOT NULL,
+    unit_cost           NUMERIC(12,2) NOT NULL,  -- costo pagado por unidad (sin IVA)
+    subtotal            NUMERIC(12,2) NOT NULL
+);
+
+-- ─── ÍNDICES para que el dashboard y reportes no se pongan lentos ────────────
+CREATE INDEX idx_supplier_products_supplier ON supplier_products(supplier_id);
+CREATE INDEX idx_supplier_products_product  ON supplier_products(product_id);
+CREATE INDEX idx_purchase_orders_supplier   ON purchase_orders(supplier_id);
+CREATE INDEX idx_purchase_orders_created    ON purchase_orders(created_at);
+CREATE INDEX idx_purchase_order_items_po    ON purchase_order_items(purchase_order_id);
+CREATE INDEX idx_purchase_order_items_prod  ON purchase_order_items(product_id);
+
+
+
+
+
+
+
+
+
+	-- ═══════════════════════════════════════════════════════════════════════════
+-- Ejecutar en pgAdmin. Agrega código de barras (para futuro escáner) y
+-- expone created_at/updated_at que YA EXISTÍAN en la tabla pero el backend
+-- nunca leía ni escribía.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Código de barras opcional. NULL para productos sin código físico
+-- (tornillería suelta, productos que vendes por kg/metro, etc.)
+ALTER TABLE products
+    ADD COLUMN IF NOT EXISTS barcode VARCHAR(50);
+
+-- Índice único parcial: solo exige unicidad cuando el código SÍ existe,
+-- así puedes tener cientos de productos con barcode = NULL sin conflicto
+CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode_unique
+    ON products (barcode) WHERE barcode IS NOT NULL;
+
+-- updated_at no se actualizaba solo — esto lo hace automático en cada UPDATE,
+-- sin necesidad de tocar el código Java cada vez que se edite un producto
+CREATE OR REPLACE FUNCTION set_updated_at_products()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_products_updated_at ON products;
+CREATE TRIGGER trg_products_updated_at
+    BEFORE UPDATE ON products
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_at_products();
+
+
+
+
+
+
+
+
+
+
+
+CREATE TABLE cfdi_timbrados (
+    id              BIGSERIAL PRIMARY KEY,
+    sale_id         BIGINT REFERENCES sales(id),
+    prefactura_id   BIGINT REFERENCES prefacturas(id),
+ 
+    -- Datos del CFDI emitido
+    uuid            VARCHAR(40)  NOT NULL UNIQUE,   -- folio fiscal SAT
+    serie           VARCHAR(5),
+    folio           VARCHAR(20),
+    fecha_timbrado  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+ 
+    -- Respuesta completa de FEL
+    xml_timbrado    TEXT,       -- XML sellado + timbrado completo
+    pdf_base64      TEXT,       -- PDF en base64 (FEL lo genera automáticamente)
+    cbb_url         VARCHAR(500),
+ 
+    -- Auditoría
+    rfc_receptor    VARCHAR(13),
+    nombre_receptor VARCHAR(300),
+    total           NUMERIC(12,2),
+    status          VARCHAR(20) NOT NULL DEFAULT 'VIGENTE', -- VIGENTE | CANCELADO
+    cancelado_at    TIMESTAMP WITH TIME ZONE,
+    cancel_reason   TEXT,
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+ 
+CREATE INDEX idx_cfdi_sale         ON cfdi_timbrados(sale_id);
+CREATE INDEX idx_cfdi_prefactura   ON cfdi_timbrados(prefactura_id);
+CREATE INDEX idx_cfdi_uuid         ON cfdi_timbrados(uuid);
+CREATE INDEX idx_cfdi_status       ON cfdi_timbrados(status);
+ 
+-- Columnas de credenciales FEL en tabla empresa
+-- Las guarda de forma permanente para no tener que ingresarlas cada vez
+ALTER TABLE empresa
+    ADD COLUMN IF NOT EXISTS fel_usuario  VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS fel_cuenta   VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS fel_password VARCHAR(100);
+ 
+
+
+--
+--UPDATE empresa SET
+ --   fel_usuario  = 'XAXX010101000',
+  --  fel_cuenta   = 'XAXX010101000',
+   -- fel_password = 'TU_PASSWORD_FEL_AQUI'
+--WHERE id = 1;
+
+
+
+ALTER TABLE nombre_de_tu_tabla 
+ALTER COLUMN cbb_url TYPE TEXT;
+
+
+ALTER TABLE empresa ADD COLUMN IF NOT EXISTS fel_pin VARCHAR(20);
+--UPDATE empresa SET fel_pin = 'TU_PIN_AQUI' WHERE rfc = 'XAXX010101000';
+
+
+
+
+
+-- Agregar campos de dirección y teléfono a la tabla empresa
+ALTER TABLE empresa ADD COLUMN IF NOT EXISTS direccion VARCHAR(300);
+ALTER TABLE empresa ADD COLUMN IF NOT EXISTS colonia VARCHAR(100);
+ALTER TABLE empresa ADD COLUMN IF NOT EXISTS municipio VARCHAR(100);
+ALTER TABLE empresa ADD COLUMN IF NOT EXISTS estado VARCHAR(50);
+ALTER TABLE empresa ADD COLUMN IF NOT EXISTS telefono VARCHAR(20);
+
+-- Llenar con tus datos reales
+UPDATE empresa SET
+    direccion  = 'Calle Ejemplo 123',
+    colonia    = 'Centro',
+    municipio  = 'Culiacán',
+    estado     = 'Sinaloa',
+    telefono   = '6670000000'
+WHERE rfc = 'XAXX010101000';
+
+-- Verificar
+SELECT id, rfc, razon_social, codigo_postal, direccion, colonia, municipio, estado, telefono
+FROM empresa;
+
+
+ 
+
+-- Fecha en que se llevó cada producto y quién lo llevó
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS added_at    TIMESTAMP;
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS llevado_por VARCHAR(150);
+ 
+-- Backfill: los productos existentes toman la fecha de su venta
+UPDATE sale_items si
+SET    added_at = s.created_at
+FROM   sales s
+WHERE  s.id = si.sale_id
+  AND  si.added_at IS NULL;
+ 
+
+
+
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- FerrePOS — Trazabilidad por producto en la libreta de fiado
+-- Ejecutar UNA VEZ en pgAdmin ANTES de arrancar el backend nuevo
+-- (ddl-auto=validate exige que las columnas existan)
+-- ══════════════════════════════════════════════════════════════════════════════
+ 
+-- Fecha en que se llevó cada producto y quién lo llevó
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS added_at    TIMESTAMP;
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS llevado_por VARCHAR(150);
+ 
+-- Backfill: los productos existentes toman la fecha de su venta
+UPDATE sale_items si
+SET    added_at = s.created_at
+FROM   sales s
+WHERE  s.id = si.sale_id
+  AND  si.added_at IS NULL;
+ 
+
+
+
+
+
+ 
+CREATE TABLE IF NOT EXISTS product_images (
+    id          BIGSERIAL PRIMARY KEY,
+    product_id  BIGINT       NOT NULL,
+    url         TEXT         NOT NULL,
+    titulo      VARCHAR(80),            -- "Frente", "Especificaciones", "Etiqueta"...
+    orden       INTEGER      NOT NULL DEFAULT 0,  -- 0 = principal
+    created_at  TIMESTAMP    NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_product_images_product
+        FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+);
+ 
+-- Búsqueda rápida de las fotos de un producto, ya ordenadas
+CREATE INDEX IF NOT EXISTS idx_product_images_product
+    ON product_images (product_id, orden);
+ 
+-- ── Backfill: las fotos que ya existían (Product.imagen_url) pasan a ser
+--    la foto principal (orden 0) de cada producto, sin perder nada.
+INSERT INTO product_images (product_id, url, titulo, orden)
+SELECT p.id, p.imagen_url, 'Principal', 0
+FROM   products p
+WHERE  p.imagen_url IS NOT NULL
+  AND  p.imagen_url <> ''
+  AND  NOT EXISTS (
+        SELECT 1 FROM product_images pi WHERE pi.product_id = p.id
+  );
+ 
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX idx_products_name_trgm ON products USING gin (name gin_trgm_ops);
+
+
+
+
+ 
+-- Cada venta guarda a qué CFDI global pertenece
+ALTER TABLE sales
+    ADD COLUMN IF NOT EXISTS cfdi_global_id BIGINT
+    REFERENCES cfdi_timbrados(id);
+ 
+-- Índice para que el historial cargue rápido
+CREATE INDEX IF NOT EXISTS idx_sales_cfdi_global
+    ON sales(cfdi_global_id);
+ 
+-- NOTA: Las ventas incluidas en facturas globales ANTERIORES a esta
+-- actualización tienen incluido_factura_global = TRUE pero
+-- cfdi_global_id = NULL, porque el sistema no guardaba la relación.
+-- Sus globales mostrarán "0 tickets ligados" en el historial — es normal.
+-- A partir de la primera global que timbres con el sistema actualizado,
+-- la trazabilidad queda completa.
+
+
+
+-- ═══════════════════════════════════════════════════════════════════════
+--  MIGRACIÓN: Folios consecutivos de tickets (INV-000001, INV-000002...)
+--  Ejecutar UNA VEZ en PostgreSQL antes de arrancar el backend actualizado.
+-- ═══════════════════════════════════════════════════════════════════════
+ 
+-- Secuencia atómica para numerar tickets. Arranca donde va tu contador
+-- de ventas para que el folio "cuente" desde tus ventas reales:
+-- toma el número de ventas existentes + 1 como punto de partida.
+DO $$
+DECLARE
+    inicio BIGINT;
+BEGIN
+    SELECT COUNT(*) + 1 INTO inicio FROM sales;
+    EXECUTE format(
+        'CREATE SEQUENCE IF NOT EXISTS seq_ticket_folio START %s', inicio);
+END $$;
+ 
+-- NOTAS:
+-- 1. Los tickets ANTERIORES conservan su folio aleatorio (INV-0B39C38D).
+--    NO se renumeran a propósito: esos folios ya viajaron al SAT dentro
+--    de facturas globales timbradas (campo NoIdentificacion) y deben
+--    seguir coincidiendo con tus registros. Cambiarlos rompería la
+--    trazabilidad de lo ya facturado.
+-- 2. A partir de la primera venta con el sistema actualizado, los folios
+--    salen consecutivos: INV-000015, INV-000016, ...
+-- 3. No puede haber choques con los folios viejos: los aleatorios tienen
+--    8 caracteres hexadecimales y los nuevos 6 dígitos; además la columna
+--    invoice_number es UNIQUE, la base lo rechazaría de cualquier forma.
+-- 4. Si la secuencia avanza y una venta falla (rollback), puede quedar un
+--    "hueco" (ej. INV-000007 no existe). Es normal y fiscalmente
+--    irrelevante: el folio del ticket es control interno; lo que importa
+--    es que sean únicos y rastreables.
+ 
+
+
+
+-- ═══════════════════════════════════════════════════════════════════════
+--  MIGRACIÓN: Producto libre completo
+--  Ejecutar UNA VEZ antes de arrancar el backend actualizado.
+-- ═══════════════════════════════════════════════════════════════════════
+
+-- 1. Columna para la descripción real del producto libre en cada renglón
+ALTER TABLE sale_items
+    ADD COLUMN IF NOT EXISTS custom_name VARCHAR(200);
+
+-- 2. Asegurar el producto genérico (id -1, SKU "LIBRE") con claves SAT
+--    genéricas correctas para que el CFDI nominativo timbre sin broncas:
+--    01010101 = "No existe en el catálogo", H87 = Pieza.
+--    Si ya existe, solo se corrigen sus claves; si no, se crea.
+INSERT INTO products (id, sku, name, list_price, is_active,
+                      sat_clave_prod_serv, sat_clave_unidad)
+VALUES (-1, 'LIBRE', 'Producto libre (venta de mostrador)', 1.00, true,
+        '01010101', 'H87')
+ON CONFLICT (id) DO UPDATE SET
+    sat_clave_prod_serv = '01010101',
+    sat_clave_unidad    = 'H87',
+    is_active           = true;
+
+-- Verificación:
+SELECT id, sku, name, sat_clave_prod_serv, sat_clave_unidad
+FROM products WHERE id = -1;
+
+-- NOTA sobre unidades fraccionables: aunque el producto genérico lleva
+-- clave H87 (pieza), el CFDI acepta cantidades con decimales (2.5, 0.750),
+-- así que un libre vendido "por metro" timbra sin problema. La unidad
+-- elegida en caja (m, kg, L...) es informativa para el ticket y el carrito.
+
+
+-- ═══════════════════════════════════════════════════════════════════════
+--  FIX: ocultar el producto genérico del Dashboard/listados
+--  (apareció en "Stock bajo" porque quedó activo). Ejecutar UNA VEZ.
+--  La venta de producto libre NO se afecta: se busca directo por id -1.
+-- ═══════════════════════════════════════════════════════════════════════
+UPDATE products
+SET is_active = false,
+    min_stock_level = 0
+WHERE id = -1;
+
+SELECT id, sku, name, is_active FROM products WHERE id = -1;
+ 
+
+
+
+-- ═══════════════════════════════════════════════════════════════════════
+--  MIGRACIÓN: Producto libre completo
+--  Ejecutar UNA VEZ antes de arrancar el backend actualizado.
+-- ═══════════════════════════════════════════════════════════════════════
+
+-- 1. Columna para la descripción real del producto libre en cada renglón
+ALTER TABLE sale_items
+    ADD COLUMN IF NOT EXISTS custom_name VARCHAR(200);
+
+-- 2. Asegurar el producto genérico (id -1, SKU "LIBRE") con claves SAT
+--    genéricas correctas para que el CFDI nominativo timbre sin broncas:
+--    01010101 = "No existe en el catálogo", H87 = Pieza.
+--    Si ya existe, solo se corrigen sus claves; si no, se crea.
+INSERT INTO products (id, sku, name, list_price, is_active,
+                      sat_clave_prod_serv, sat_clave_unidad)
+-- is_active = FALSE: el genérico NO debe aparecer en listados, búsquedas
+-- ni alertas de stock bajo (es un comodín interno, no un producto real).
+-- La venta libre sigue funcionando: el backend lo busca directo por id -1.
+VALUES (-1, 'LIBRE', 'Producto libre (venta de mostrador)', 1.00, false,
+        '01010101', 'H87')
+ON CONFLICT (id) DO UPDATE SET
+    sat_clave_prod_serv = '01010101',
+    sat_clave_unidad    = 'H87',
+    is_active           = false;
+
+-- Verificación:
+SELECT id, sku, name, sat_clave_prod_serv, sat_clave_unidad
+FROM products WHERE id = -1;
+
+-- NOTA sobre unidades fraccionables: aunque el producto genérico lleva
+-- clave H87 (pieza), el CFDI acepta cantidades con decimales (2.5, 0.750),
+-- así que un libre vendido "por metro" timbra sin problema. La unidad
+-- elegida en caja (m, kg, L...) es informativa para el ticket y el carrito.
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- ═══════════════════════════════════════════════════════════════════════
+--  CATÁLOGO DE BIRLOS — Internacionales León
+--  Generado automáticamente desde el PDF del catálogo (225 págs).
+--  543 especificaciones · 1,169 aplicaciones vehiculares · 10 marcas.
+--  Ejecutar UNA VEZ en PostgreSQL.
+-- ═══════════════════════════════════════════════════════════════════════
+
+DROP TABLE IF EXISTS catalogo_birlos_aplicaciones;
+DROP TABLE IF EXISTS catalogo_birlos;
+
+CREATE TABLE catalogo_birlos (
+    codigo          VARCHAR(20) PRIMARY KEY,   -- BR20-069RP
+    tipo            CHAR(1),                   -- E=Estría, H=Hombro
+    lado            CHAR(1),                   -- R=Derecho, L=Izquierdo
+    estria_pulg     NUMERIC(6,3),              -- Ø de estría en pulgadas
+    estria_mm       NUMERIC(6,2),              -- Ø de estría en milímetros
+    rosca           VARCHAR(40),               -- 'M12 x 1.5' o '1/2"-20 hilos'
+    largo           VARCHAR(20),               -- '45.50 mm' o '1.968"'
+    medida          VARCHAR(60),               -- texto completo del catálogo
+    pagina_catalogo INT                        -- página impresa del catálogo
+);
+
+CREATE TABLE catalogo_birlos_aplicaciones (
+    id          BIGSERIAL PRIMARY KEY,
+    marca       VARCHAR(30)  NOT NULL,
+    aplicacion  VARCHAR(120) NOT NULL,
+    delantero   BOOLEAN DEFAULT FALSE,
+    trasero     BOOLEAN DEFAULT FALSE,
+    anio        VARCHAR(15),
+    codigo      VARCHAR(20)  NOT NULL,         -- puede no tener spec (100 casos)
+    tuercas     VARCHAR(160),
+    pagina      INT
+);
+CREATE INDEX idx_birlo_app_marca  ON catalogo_birlos_aplicaciones(marca);
+CREATE INDEX idx_birlo_app_codigo ON catalogo_birlos_aplicaciones(codigo);
+CREATE INDEX idx_birlo_estria_mm  ON catalogo_birlos(estria_mm);
+
+ALTER TABLE catalogo_birlos ALTER COLUMN tipo TYPE VARCHAR(1);
+ALTER TABLE catalogo_birlos ALTER COLUMN lado TYPE VARCHAR(1);
+
+DROP TABLE IF EXISTS catalogo_auto_aplicaciones;
+CREATE TABLE catalogo_auto_aplicaciones (
+    id          BIGSERIAL PRIMARY KEY,
+    marca       VARCHAR(30)  NOT NULL,
+    modelo      VARCHAR(60)  NOT NULL,
+    version     VARCHAR(40),
+    motor       VARCHAR(20),
+    cilindrada  VARCHAR(15),
+    kw          VARCHAR(10),
+    anio_desde  VARCHAR(10),
+    anio_hasta  VARCHAR(10),
+    articulo    VARCHAR(120) NOT NULL,   -- Banda Micro-V, Bomba de agua...
+    parte       VARCHAR(20)  NOT NULL    -- número de parte Gates
+);
+CREATE INDEX idx_auto_marca  ON catalogo_auto_aplicaciones(marca);
+CREATE INDEX idx_auto_modelo ON catalogo_auto_aplicaciones(modelo);
+CREATE INDEX idx_auto_parte  ON catalogo_auto_aplicaciones(parte);
+
+
+
+
+
+-- ═══════════════════════════════════════════════════════════════════════
+--  Compra por bolsa / venta por pieza — columnas nuevas en products
+--  Ejecutar UNA VEZ antes de reiniciar el backend (ddl-auto=validate).
+-- ═══════════════════════════════════════════════════════════════════════
+ALTER TABLE products ADD COLUMN IF NOT EXISTS compra_por_bolsa BOOLEAN DEFAULT FALSE;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS piezas_por_bolsa INTEGER;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS costo_bolsa NUMERIC(12,2);
+
+
+
+-- ═══════════════════════════════════════════════════════════════════════
+--  Compra por bolsa / venta por pieza — columnas nuevas en products
+--  Ejecutar UNA VEZ antes de reiniciar el backend (ddl-auto=validate).
+-- ═══════════════════════════════════════════════════════════════════════
+ALTER TABLE products ADD COLUMN IF NOT EXISTS compra_por_bolsa BOOLEAN DEFAULT FALSE;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS piezas_por_bolsa INTEGER;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS costo_bolsa NUMERIC(12,2);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS precio_bolsa NUMERIC(12,2);
+
+
+
+-- ═══════════════════════════════════════════════════════════════════════
+--  Ambiente FEL en caliente (producción ↔ pruebas desde la Consola de
+--  Desarrollo, sin reiniciar el backend)
+--  Ejecutar UNA VEZ antes de reiniciar el backend con los Java nuevos.
+-- ═══════════════════════════════════════════════════════════════════════
+ALTER TABLE empresa ADD COLUMN IF NOT EXISTS fel_ambiente VARCHAR(20) DEFAULT 'PRODUCCION';
+
+-- Deja explícito el valor actual (ajusta si tu negocio ya opera en pruebas)
+UPDATE empresa SET fel_ambiente = 'PRODUCCION' WHERE fel_ambiente IS NULL;

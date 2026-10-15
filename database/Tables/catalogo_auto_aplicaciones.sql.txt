@@ -1,0 +1,17 @@
+DROP TABLE IF EXISTS catalogo_auto_aplicaciones;
+CREATE TABLE catalogo_auto_aplicaciones (
+    id          BIGSERIAL PRIMARY KEY,
+    marca       VARCHAR(30)  NOT NULL,
+    modelo      VARCHAR(60)  NOT NULL,
+    version     VARCHAR(40),
+    motor       VARCHAR(20),
+    cilindrada  VARCHAR(15),
+    kw          VARCHAR(10),
+    anio_desde  VARCHAR(10),
+    anio_hasta  VARCHAR(10),
+    articulo    VARCHAR(120) NOT NULL,   -- Banda Micro-V, Bomba de agua...
+    parte       VARCHAR(20)  NOT NULL    -- número de parte Gates
+);
+CREATE INDEX idx_auto_marca  ON catalogo_auto_aplicaciones(marca);
+CREATE INDEX idx_auto_modelo ON catalogo_auto_aplicaciones(modelo);
+CREATE INDEX idx_auto_parte  ON catalogo_auto_aplicaciones(parte);

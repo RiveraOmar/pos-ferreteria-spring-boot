@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FerrePOS — Punto de venta</title>
+    <!-- ═══ LIBRERÍAS, DESDE ESTA MISMA MÁQUINA ═══════════════════════════
+         Antes se pedían a cdn.jsdelivr.net en CADA arranque. Sin internet el
+         sistema abría sin diseño y — lo grave — sin SweetAlert2: cada
+         confirmación (cobrar, borrar, surtir) tronaba con "Swal is not
+         defined" y la caja quedaba inservible.
+         Los archivos viven en vendor\ y los baja descargar_librerias.bat.
+         ═══════════════════════════════════════════════════════════════════ -->
+    <link href="vendor/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/bootstrap-icons/bootstrap-icons.css">
+    <link href="vendor/swal-bootstrap-4.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Tema Mostrador AZ: identidad azul acero/carbón para toda la app -->
+    <!-- La fuente SÍ se deja en internet a propósito: sin conexión el
+         navegador cae en 'Arial Narrow', que ya viene como respaldo en
+         theme-az.css. Se ve casi igual y no rompe nada. -->
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/theme-az.css">
+    <!-- Menú lateral de tres posiciones: fijo / iconos / oculto -->
+    <link rel="stylesheet" href="css/sidebar-menu.css">
+    <link rel="icon" href="data:,">
+</head>
+<body class="menu-oculto">
+<!-- Se aplica el modo guardado ANTES de que se dibuje nada, para que no
+     se vea el menú un instante y luego desaparezca de golpe. -->
+<script>
+    try {
+        var m = localStorage.getItem('ferrepos_modo_menu');
+        if (['fijo', 'riel', 'oculto'].indexOf(m) !== -1) {
+            document.body.className =
+                document.body.className.replace(/\bmenu-(fijo|riel|oculto)\b/g, '').trim()
+                + ' menu-' + m;
+        }
+    } catch (e) { /* sin localStorage, se queda el modo por defecto */ }
+</script>
+
+<!-- Botón de menú móvil (solo visible en pantallas chicas) -->
+<button id="btn-menu-movil" aria-label="Abrir menú"><i class="bi bi-list"></i></button>
+<div id="overlay-sidebar"></div>
+
+<!-- Jaladera del borde izquierdo y velo (solo en modo oculto, escritorio) -->
+<div id="zona-menu" title="Menú (Ctrl + B)"></div>
+<button id="btn-cajon" type="button" aria-label="Abrir menú" aria-expanded="false"
+        title="Abrir menú (Ctrl + B)"><i class="bi bi-list"></i></button>
+<div id="overlay-cajon"></div>
+
+<div class="d-flex vh-100 w-100 overflow-hidden" style="max-width:100%">
+
+    <!-- ─── SIDEBAR ──────────────────────────────────────────────────────── -->
+    <aside class="d-flex flex-column flex-shrink-0 p-3 sidebar">
+
+        <!-- Logo / marca (debe seguir siendo el primer hijo: style.css le
+             pinta la placa de acero con el selector .sidebar > a:first-child) -->
+        <a href="#" class="marca d-flex align-items-center mb-4 text-white text-decoration-none">
+            <div style="width:38px;height:38px;border-radius:11px;
+                        display:flex;align-items:center;justify-content:center;margin-right:11px">
+                <i class="bi bi-tools" style="font-size:1.2rem;color:#1b212b"></i>
+            </div>
+            <div class="marca-texto d-flex flex-column" style="line-height:1.1">
+                <span class="fw-bold" style="font-size:1.2rem;letter-spacing:-.02em">FerrePOS</span>
+                <span style="font-size:.62rem;letter-spacing:2px;color:var(--steel-600);
+                             text-transform:uppercase;font-weight:600">Punto de venta</span>
+            </div>
+        </a>
+
+        <!-- Menú principal -->
+        <ul class="nav nav-pills flex-column mb-auto" id="main-menu">
+
+            <!-- PRINCIPAL -->
+            <li class="nav-item"><span class="nav-link disabled">Principal</span></li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-module="dashboard" title="Dashboard">
+                    <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-module="ventas" title="Ventas">
+                    <i class="bi bi-cart3 me-2"></i> Ventas
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-module="prefacturas" title="Pre-facturas">
+                    <i class="bi bi-file-earmark-text me-2"></i> Pre-facturas
+                </a>
+            </li>
+
+            <!-- INVENTARIO -->
+            <li class="nav-item"><span class="nav-link disabled">Inventario</span></li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-module="productos" title="Productos">
+                    <i class="bi bi-tags me-2"></i> Productos
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link d-flex align-items-center justify-content-between"
+                   data-module="faltantes" title="Faltantes">
+                    <span><i class="bi bi-cart-dash me-2"></i> Faltantes</span>
+                    <span class="badge bg-danger rounded-pill" id="badge-sidebar-faltantes"
+                          style="display:none;font-size:.65rem" title="Productos con stock bajo">0</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-module="inventario" title="Catálogos">
+                    <i class="bi bi-box-seam me-2"></i> Catálogos
+                </a>
+            </li>
+
+            <!-- COMPRAS Y CLIENTES -->
+            <li class="nav-item"><span class="nav-link disabled">Compras y clientes</span></li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-module="compras" title="Registrar compra">
+                    <i class="bi bi-cart-plus me-2"></i> Registrar compra
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-module="proveedores" title="Proveedores">
+                    <i class="bi bi-truck me-2"></i> Proveedores
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-module="clientes" title="Clientes">
+                    <i class="bi bi-people me-2"></i> Clientes
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link d-flex align-items-center justify-content-between"
+                   data-module="deudas" title="Deudas">
+                    <span><i class="bi bi-journal-bookmark me-2"></i> Deudas</span>
+                    <span class="badge bg-danger rounded-pill" id="badge-sidebar-deudas"
+                          style="display:none;font-size:.65rem">0</span>
+                </a>
+            </li>
+
+            <!-- GESTIÓN -->
+            <li class="nav-item"><span class="nav-link disabled">Gestión</span></li>
+            <li class="nav-item">
+                <a href="#" class="nav-link d-flex align-items-center gap-2"
+                   data-module="facturacion" title="Facturación CFDI">
+                    <i class="bi bi-receipt-cutoff" style="color:var(--amber-400)"></i>
+                    <span>Facturación CFDI</span>
+                    <span class="badge ms-auto" style="background:var(--green-600);font-size:.6rem">SAT</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-module="historiales" title="Historiales">
+                    <i class="bi bi-clock-history me-2"></i> Historiales
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-module="reportes" title="Reportes">
+                    <i class="bi bi-bar-chart-line me-2"></i> Reportes
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-module="geminiBusqueda" title="Búsqueda IA">
+                    <i class="bi bi-stars me-2" style="color:var(--amber-400)"></i> Búsqueda IA
+                </a>
+            </li>
+            <li class="nav-item solo-admin" style="display:none">
+                <a href="#" class="nav-link" data-module="devConsole" title="Consola de Desarrollo">
+                    <i class="bi bi-terminal-fill me-2"></i> Consola de Desarrollo
+                </a>
+            </li>
+        </ul>
+
+        <!-- Footer sidebar -->
+        <div class="mt-auto pt-2">
+            <hr style="border-color:rgba(255,255,255,.08)">
+
+            <button class="btn btn-sm riel-btn" id="btn-modo-menu" type="button">
+                <i class="bi bi-layout-sidebar-reverse"></i>
+                <span class="riel-etiqueta">Menú: oculto</span>
+            </button>
+
+            <button class="btn btn-sm riel-btn" id="btn-toggle-tema" type="button" title="Cambiar tema">
+                <i class="bi bi-moon-fill" id="icono-tema"></i>
+                <span class="riel-etiqueta" id="texto-tema">Modo oscuro</span>
+            </button>
+
+            <button class="btn btn-sm riel-btn" id="btn-salir" type="button"
+                    onclick="window.close()" title="Salir del sistema">
+                <i class="bi bi-box-arrow-left"></i>
+                <span class="riel-etiqueta">Salir del sistema</span>
+            </button>
+
+            <div class="text-center riel-version">
+                <small style="color:var(--steel-600);font-size:.7rem;letter-spacing:.03em">
+                    v1.1.0 · FerrePOS</small>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ─── CONTENIDO PRINCIPAL ───────────────────────────────────────────── -->
+    <main class="flex-grow-1 p-4 overflow-auto" id="main-content"></main>
+</div>
+
+<!-- Toasts -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="liveToast" class="toast align-items-center text-white border-0 shadow" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="toast-mensaje"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<!-- Van ANTES de app.js: sin ellas, el primer Swal.fire() de cualquier
+     módulo truena. -->
+<script src="vendor/bootstrap.bundle.min.js"></script>
+<script src="vendor/sweetalert2.all.min.js"></script>
+<script type="module" src="js/app.js"></script>
+<!-- Menú lateral. Va como type="module" A PROPÓSITO: así corre DESPUÉS de
+     app.js (que también es módulo) y no al revés. Si fuera un script
+     normal correría antes, y cualquier cosa que app.js le haga al <body>
+     al arrancar pisaría la configuración del menú. -->
+<script type="module" src="js/sidebar-menu.js"></script>
+</body>
+</html>
