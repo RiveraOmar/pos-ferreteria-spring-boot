@@ -16,11 +16,9 @@ public record CustomerResponseDTO(
         String address,
         String city,
 
-        // ── Datos fiscales SAT ───────────────────────────────
         String razonSocial,
         String regimenFiscal,
         String usoCfdi,
         String codigoPostal,
         String satPais
-        // ────────────────────────────────────────────────────
 ) {}

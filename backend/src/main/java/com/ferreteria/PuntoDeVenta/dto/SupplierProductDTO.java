@@ -13,7 +13,7 @@ public record SupplierProductDTO(
         String supplierSku,
         BigDecimal lastCost,
         LocalDateTime lastPurchaseAt,
-        BigDecimal currentListPrice,  // precio de venta actual del producto, para validar costo-vs-venta al re-comprar
-        String satClaveUnidad,        // clave SAT del producto, para saber si acepta fracciones (kg, m, L...)
-        String productImageUrl        // foto del producto, para reconocerlo rápido en el listado de compras
+        BigDecimal currentListPrice,  
+        String satClaveUnidad,       
+        String productImageUrl        
 ) {}

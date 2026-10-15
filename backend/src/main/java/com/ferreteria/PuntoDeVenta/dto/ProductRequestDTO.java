@@ -25,7 +25,6 @@ public record ProductRequestDTO(
         @Digits(integer = 10, fraction = 2)
         BigDecimal costPrice,
 
-        // BigDecimal: soporta alertas fraccionarias (ej. 2.5 kg)
         @DecimalMin(value = "0.00", message = "El stock mínimo no puede ser negativo")
         BigDecimal minStockLevel,
 
@@ -39,7 +38,6 @@ public record ProductRequestDTO(
 
         Map<String, Object> attributes,
 
-        // Datos SAT — todos obligatorios (se valida también en backend)
         @NotBlank(message = "La clave de producto/servicio SAT es obligatoria")
         String satClaveProdServ,
 

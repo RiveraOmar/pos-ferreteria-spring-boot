@@ -14,6 +14,6 @@ public record SupplierDTO(
         String notes,
         boolean active,
         LocalDateTime createdAt,
-        Integer totalCompras,        // cuántas órdenes de compra tiene este proveedor
-        java.math.BigDecimal totalGastado  // suma histórica gastada con este proveedor
+        Integer totalCompras,        
+        java.math.BigDecimal totalGastado  
 ) {}

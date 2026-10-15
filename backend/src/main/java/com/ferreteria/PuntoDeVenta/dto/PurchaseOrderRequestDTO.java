@@ -26,8 +26,7 @@ public record PurchaseOrderRequestDTO(
             @DecimalMin(value = "0.01", message = "El costo unitario debe ser mayor a 0")
             BigDecimal unitCost,
 
-            // Opcional: si se envía, también actualiza el precio de venta del producto.
-            // Si se omite, solo se actualiza el costo (el precio de venta no cambia).
+           
             @DecimalMin(value = "0.01", message = "El precio de venta debe ser mayor a 0")
             BigDecimal newListPrice
     ) {

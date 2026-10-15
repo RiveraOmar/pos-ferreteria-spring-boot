@@ -10,20 +10,18 @@ public record ProductResponseDTO(
         String description,
         BigDecimal price,
         String costCode,
-        BigDecimal currentStock,    // BigDecimal: puede ser 10.5 metros, 250.0 gramos
+        BigDecimal currentStock,    
         Map<String, Object> attributes,
         CategorySlimDTO category,
         boolean active,
-        BigDecimal minStockLevel,   // Fix: Product.minStockLevel ya es BigDecimal, no Integer
-        String barcode,             // código de barras, null si no tiene — usado en el modal de edición
+        BigDecimal minStockLevel,  
+        String barcode,            
 
-        // ── Campos SAT / CFDI ─────────────────────────────────────────────────
         String satClaveProdServ,
-        String satClaveUnidad,      // Clave SAT → determina si acepta decimales
+        String satClaveUnidad,      
         String satObjetoImp,
-        // ─────────────────────────────────────────────────────────────────────
         String imagenUrl,
-        String locationRack,   // ubicación física: pasillo/estante
+        String locationRack,   
         Boolean compraPorBolsa,
         Integer piezasPorBolsa,
         BigDecimal precioBolsa

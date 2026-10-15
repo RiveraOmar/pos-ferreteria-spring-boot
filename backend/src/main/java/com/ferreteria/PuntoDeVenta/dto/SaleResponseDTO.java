@@ -24,7 +24,7 @@ public record SaleResponseDTO(
             BigDecimal quantity,
             BigDecimal unitPrice,
             BigDecimal costAtSale,
-            LocalDateTime addedAt,   // cuándo se llevó este producto
-            String llevadoPor        // quién lo llevó (fiado)
+            LocalDateTime addedAt,   
+            String llevadoPor       
     ) {}
 }
