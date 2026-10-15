@@ -2,18 +2,11 @@ import { fetchAPI } from './api.js';
 import { fmtFecha } from './fechas.js';
 import { urlImagenCompleta } from './camara.js';
 
-// Fotos del producto que se está viendo (para la galería y el zoom)
 let fotosFicha = [];
 
-/**
- * Ficha completa de solo lectura para un producto. Reutilizable desde
- * Productos y Ventas — un solo lugar, un solo comportamiento.
- *
- * Uso: import { mostrarFichaProducto } from '../services/productDetailCard.js';
- *      mostrarFichaProducto(productId);
- */
+
 export async function mostrarFichaProducto(productId) {
-    fotosFicha = [];   // limpiar las del producto anterior
+    fotosFicha = [];   
     Swal.fire({
         title: '<i class="bi bi-card-list me-2"></i>Ficha del Producto',
         html: `<div class="text-center py-4">
@@ -25,13 +18,11 @@ export async function mostrarFichaProducto(productId) {
         width: '700px',
         didOpen: async () => {
             try {
-                // Datos y galería en paralelo (más rápido que uno tras otro)
                 const [p, fotos] = await Promise.all([
                     fetchAPI(`/products/${productId}/full-details`),
                     fetchAPI(`/products/${productId}/imagenes`).catch(() => [])
                 ]);
 
-                // Si el producto aún no tiene galería, se usa su foto clásica
                 fotosFicha = (fotos && fotos.length)
                     ? fotos
                     : (p.imagenUrl ? [{ url: p.imagenUrl, titulo: null }] : []);
@@ -48,8 +39,6 @@ export async function mostrarFichaProducto(productId) {
     });
 }
 
-// SweetAlert2 no ejecuta <script> dentro de html — los listeners se enganchan
-// aquí, justo después de Swal.update(), igual que el resto del proyecto.
 function activarPestañas() {
     document.querySelectorAll('[data-ficha-tab]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -64,11 +53,6 @@ function activarPestañas() {
     });
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// GALERÍA DE LA FICHA
-// Foto grande + tira de miniaturas. Un clic en la grande la abre a pantalla
-// completa (para ver especificaciones, letras chiquitas de la etiqueta, etc.).
-// ══════════════════════════════════════════════════════════════════════════════
 
 function galeriaFichaHTML() {
     if (!fotosFicha.length) {
@@ -122,7 +106,6 @@ function galeriaFichaHTML() {
     </div>`;
 }
 
-// Cambiar la foto grande al tocar una miniatura
 window.fichaVerFoto = (i) => {
     const f = fotosFicha[i];
     if (!f) return;
@@ -138,7 +121,6 @@ window.fichaVerFoto = (i) => {
     });
 };
 
-// Ver la foto a pantalla completa, con flechas si hay varias
 window.fichaZoom = () => {
     const grande = document.getElementById('ficha-img-grande');
     let idx = Number(grande?.dataset.idx || 0);

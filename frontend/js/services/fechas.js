@@ -13,9 +13,7 @@ export function fmtFecha(valor) {
     });
 }
  
-/**
- * Solo fecha: "22/06/2026"
- */
+
 export function fmtFechaCorta(valor) {
     if (!valor) return '---';
     const d = new Date(valor);
@@ -27,14 +25,10 @@ export function fmtFechaCorta(valor) {
     });
 }
  
-/**
- * Devuelve la fecha de hoy en formato YYYY-MM-DD para inputs type="date"
- * usando la zona horaria de Sinaloa
- */
 export function hoyISO() {
     const d = new Date();
-    // Ajustar a UTC-7
-    const offset = d.getTimezoneOffset(); // minutos de diferencia con UTC
-    const local  = new Date(d.getTime() - (offset + 420) * 60000); // 420 = 7*60
+  
+    const offset = d.getTimezoneOffset(); 
+    const local  = new Date(d.getTime() - (offset + 420) * 60000); 
     return local.toISOString().split('T')[0];
 }

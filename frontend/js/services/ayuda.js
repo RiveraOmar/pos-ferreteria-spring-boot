@@ -1,15 +1,7 @@
-// ═════════════════════════════════════════════════════════════════════════════
-//  AYUDA DE MOSTRADOR — botón "?" flotante, visible en todas las pantallas
-//
-//  Guía en español llano para quien atiende la caja, pensada para poder
-//  resolver el día SIN llamarle al dueño... y con los teléfonos a la mano
-//  para cuando sí haga falta.
-//
-//  ⚠️ EDITA AQUÍ los datos de contacto del negocio:
-// ═════════════════════════════════════════════════════════════════════════════
+
 const CONTACTOS = [
-    { quien: 'Dueño (Luis)',            tel: '667-XXX-XXXX' },   // ← EDITA
-    { quien: 'Soporte del sistema',     tel: '667-XXX-XXXX' },   // ← EDITA
+    { quien: 'Dueño (Luis)',            tel: '667-XXX-XXXX' },   
+    { quien: 'Soporte del sistema',     tel: '667-XXX-XXXX' },   
 ];
 
 export function instalarBotonAyuda() {
@@ -130,7 +122,7 @@ function abrirAyuda() {
                     (producto, cantidad, precio) y captúralo después.</li>
             </ol>
             <div class="border rounded p-2" style="background:#FDEBDD">
-                <strong>📞 Llamar a:</strong><br>
+                <strong> Llamar a:</strong><br>
                 ${CONTACTOS.map(c =>
                     `${c.quien}: <strong>${c.tel}</strong>`).join('<br>')}
             </div>

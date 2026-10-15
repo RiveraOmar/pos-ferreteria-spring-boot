@@ -24,10 +24,7 @@ import { mostrarLogin } from './modules/login.js';
 
 import { instalarBotonAyuda } from './services/ayuda.js';
 
-// ─── TOAST GLOBAL ─────────────────────────────────────────────────────────────
-// Notificación breve no intrusiva (esquina inferior). La usan los módulos para
-// confirmaciones que no ameritan un modal ("Guardado", "Copiado", etc.).
-// Uso: window.mostrarToast('Mensaje', 'success' | 'danger' | 'warning' | 'info')
+
 window.mostrarToast = (mensaje, tipo = 'success') => {
     const el = document.getElementById('liveToast');
     const body = document.getElementById('toast-mensaje');
@@ -50,8 +47,7 @@ window.mostrarToast = (mensaje, tipo = 'success') => {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ─── GUARDIA DE SESIÓN ────────────────────────────────────────────────────
-    // Sin sesión válida → pantalla de login. Con sesión → arranca el sistema.
+    
     if (!estaAutenticado()) {
         mostrarLogin(() => location.reload());
         return;
@@ -59,28 +55,12 @@ document.addEventListener('DOMContentLoaded', () => {
     iniciarApp();
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  PRECARGA DE IMÁGENES DE PRODUCTO
-// ══════════════════════════════════════════════════════════════════════════════
-// Se ejecuta en segundo plano después de que el módulo inicial cargó. Recorre
-// el catálogo, pide todas las fotos y deja que el navegador las cachee.
-// Resultado: al abrir Productos, Ventas, Dashboard o cualquier pantalla que
-// muestre fotos, las imágenes ya están ahí al instante — sin espera.
-//
-// Como todo viaja por localhost (el servidor corre en la misma PC), la carga
-// es muy rápida y no bloquea nada. Las imágenes ya comprimidas pesan ~250 KB
-// cada una (compresión del UploadController), así que un catálogo de 400
-// productos ocuparía ~100 MB de caché — sin problema para cualquier PC moderna.
-//
-// El progreso se registra en la consola del navegador para depuración:
-//   [CACHE-IMG] 237 de 237 imágenes precargadas
-// ══════════════════════════════════════════════════════════════════════════════
+
 async function precargarImagenes() {
     try {
         const productos = await fetchAPI('/products');
         if (!Array.isArray(productos)) return;
 
-        // Solo los que tienen foto
         const urls = productos
             .filter(p => p.imagenUrl)
             .map(p => urlImagenCompleta(p.imagenUrl));
@@ -90,8 +70,6 @@ async function precargarImagenes() {
             return;
         }
 
-        // Cargar en lotes de 6 para no saturar el navegador.
-        // Cada lote va en paralelo; entre lotes se espera a que termine.
         const LOTE = 6;
         let cargadas = 0, fallidas = 0;
 
@@ -112,7 +90,6 @@ async function precargarImagenes() {
             + (fallidas ? ` (${fallidas} no encontrada(s))` : '')
         );
     } catch (e) {
-        // No es crítico: si falla, las fotos se cargan bajo demanda como antes.
         console.warn('[CACHE-IMG] No se pudieron precargar imágenes:', e.message);
     }
 }
@@ -121,7 +98,6 @@ function iniciarApp() {
     const mainContent = document.getElementById('main-content');
     const menuLinks   = document.querySelectorAll('#main-menu .nav-link[data-module]');
 
-    // ─── MENÚ MÓVIL ───────────────────────────────────────────────────────────
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.getElementById('overlay-sidebar');
     const btnMenu = document.getElementById('btn-menu-movil');
@@ -138,7 +114,6 @@ function iniciarApp() {
     btnMenu?.addEventListener('click', abrirMenu);
     overlay?.addEventListener('click', cerrarMenu);
 
-    // Módulos que aún NO están listos para móvil (se hará después)
     const SOLO_DESKTOP = ['ventas'];
 
     const avisoSoloDesktop = (nombre) => {
@@ -166,7 +141,6 @@ function iniciarApp() {
     };
 
     const loadModule = async (moduleName) => {
-        // En móvil, los módulos aún no adaptados muestran un aviso amable
         if (esMovil() && SOLO_DESKTOP.includes(moduleName)) {
             sessionStorage.setItem('modulo_activo', moduleName);
             const nombres = { ventas: 'Ventas' };
@@ -174,7 +148,6 @@ function iniciarApp() {
             return;
         }
         mostrarSpinner();
-        // Recordar el módulo activo (si se recarga la página, vuelve aquí)
         sessionStorage.setItem('modulo_activo', moduleName);
         try {
             switch (moduleName) {
@@ -193,10 +166,6 @@ function iniciarApp() {
                 case 'prefacturas':     initPrefacturas(mainContent);        break;
                 case 'proveedores':     initProveedores(mainContent);        break;
                 case 'compras':         initCompras(mainContent);            break;
-                // Categorías y catálogos ya no tienen entrada propia en el menú:
-                // Categorías vive dentro de Productos; los catálogos técnicos
-                // dentro de "Catálogos" (initInventario). Los cases se conservan
-                // por compatibilidad con deep-links antiguos.
                 case 'categorias':      initCategorias(mainContent);         break;
                 case 'catalogos':       initCatalogos(mainContent);          break;
                 case 'catalogoBateria': initCatalogosBaterias(mainContent);  break;
@@ -218,31 +187,25 @@ function iniciarApp() {
         }
     };
 
-    // Marca visualmente el item activo del menú (por nombre de módulo)
     const marcarActivo = (moduleName) => {
         menuLinks.forEach(l =>
             l.classList.toggle('active', l.getAttribute('data-module') === moduleName));
     };
 
-    // Navegación
     menuLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const mod = e.currentTarget.getAttribute('data-module');
             marcarActivo(mod);
-            cerrarMenu();          // en móvil, cerrar el panel al elegir
+            cerrarMenu();          
             loadModule(mod);
         });
     });
 
-    // ─── TABLAS RESPONSIVAS ───────────────────────────────────────────────────
-    // Convierte cualquier <table> a formato "tarjeta" en móvil, copiando el
-    // encabezado de cada columna a un data-label en sus celdas. Se ejecuta cada
-    // vez que un módulo termina de pintar (observando cambios en #main-content).
     const adaptarTablas = () => {
         if (!esMovil()) return;
         mainContent.querySelectorAll('table').forEach(tabla => {
-            if (tabla.classList.contains('tabla-movil-lista')) return; // ya procesada
+            if (tabla.classList.contains('tabla-movil-lista')) return; 
             const encabezados = [...tabla.querySelectorAll('thead th')]
                 .map(th => th.textContent.trim());
             if (!encabezados.length) return;
@@ -256,14 +219,12 @@ function iniciarApp() {
         });
     };
 
-    // Observa el contenido: cuando un módulo pinta su tabla, la adapta
     const observer = new MutationObserver(() => {
         clearTimeout(window.__adaptarTablasTimer);
         window.__adaptarTablasTimer = setTimeout(adaptarTablas, 60);
     });
     observer.observe(mainContent, { childList: true, subtree: true });
 
-    // ─── TEMA OSCURO ──────────────────────────────────────────────────────────
     function aplicarTema(tema) {
         const esDark = tema === 'dark';
         document.body.classList.toggle('dark-mode', esDark);
@@ -281,11 +242,8 @@ function iniciarApp() {
         aplicarTema(document.body.classList.contains('dark-mode') ? 'light' : 'dark');
     });
 
-    // ─── SESIÓN: mostrar usuario y botón de salir ─────────────────────────────
     const _u = usuarioActual();
 
-    // La Consola de Desarrollo (SQL directo) solo la ve el dueño (ADMIN) —
-    // el mismo rol que ya protege Reportes, Facturación, Compras, etc.
     const _esAdmin = _u?.roles?.some(r =>
         String(r).toUpperCase().includes('ADMIN'));
     document.querySelectorAll('.solo-admin').forEach(el => {
@@ -304,9 +262,6 @@ function iniciarApp() {
         _btnTema.parentElement.appendChild(salir);
     }
 
-    // ─── BADGE DE DEUDAS EN SIDEBAR ───────────────────────────────────────────
-    // Cuenta CLIENTES con deuda pendiente (no notas, no pagadas): coincide con
-    // lo que muestra la Libreta.
     async function actualizarBadgeDeudas() {
         try {
             const deudas = await fetchAPI('/debts');
@@ -324,7 +279,6 @@ function iniciarApp() {
         } catch (e) { console.error('Badge deudas:', e); }
     }
 
-    // ─── BADGE DE FALTANTES EN SIDEBAR (en Productos) ─────────────────────────
     async function actualizarBadgeFaltantesSidebar() {
         try {
             const productos = await fetchAPI('/products');
@@ -344,8 +298,6 @@ function iniciarApp() {
         } catch (e) { console.error('Badge faltantes:', e); }
     }
 
-    // Exponer para que los módulos refresquen los badges tras una acción
-    // (vender, abonar, agregar stock) sin esperar al intervalo.
     window.refrescarBadges = () => {
         actualizarBadgeDeudas();
         actualizarBadgeFaltantesSidebar();
@@ -356,20 +308,12 @@ function iniciarApp() {
     setInterval(actualizarBadgeDeudas, 120000);
     setInterval(actualizarBadgeFaltantesSidebar, 120000);
 
-    // ─── ARRANQUE ─────────────────────────────────────────────────────────────
-    // Vuelve al último módulo usado si se recargó la página; si no, al dashboard.
-    // Arranque pensado para el mostrador: la primera pantalla es VENTAS
-    // (a vender se abre la caja). Si el usuario navegó a otro módulo, la
-    // sesión recuerda dónde estaba (sessionStorage) y regresa ahí.
-    instalarBotonAyuda();   // botón "?" flotante en todas las pantallas
+    instalarBotonAyuda();   
     const inicial = sessionStorage.getItem('modulo_activo') || 'ventas';
     const existe = [...menuLinks].some(l => l.getAttribute('data-module') === inicial);
     const arranque = existe ? inicial : 'ventas';
     marcarActivo(arranque);
     loadModule(arranque);
 
-    // ─── PRECARGA DE IMÁGENES ─────────────────────────────────────────────────
-    // 2 segundos después de que la pantalla inicial pintó: así el usuario ya
-    // puede trabajar y las fotos se bajan en segundo plano sin que note nada.
     setTimeout(precargarImagenes, 2000);
 }

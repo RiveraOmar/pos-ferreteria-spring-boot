@@ -1,25 +1,10 @@
 import { fetchAPI } from './api.js';
 
-// ══════════════════════════════════════════════════════════════════════════════
-// REGLA DE LOS $2,000 (deducibilidad de pagos en efectivo)
-//
-// 1) VENTA DE CONTADO EN EFECTIVO ≥ $2,000 → se ofrece dividir en varias
-//    ventas menores a $2,000 (una factura c/u).
-//
-// 2) FIADO (notas de deuda): ninguna nota debe llegar a $2,000.
-//    - Si el producto ya no cabe en la nota, se abre nota nueva.
-//    - Si el trabajador vuelve con productos chicos y CABEN en una nota
-//      pendiente con espacio, se agregan ahí (se aprovecha la nota y el
-//      timbre en vez de abrir otra).
-// ══════════════════════════════════════════════════════════════════════════════
 
-export const LIMITE_EFECTIVO = 2000; // cada venta/nota queda POR DEBAJO de esto
+export const LIMITE_EFECTIVO = 2000; 
 
 const fmt = n => Number(n || 0).toLocaleString('es-MX',
     { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-// ─── ATOMIZAR: convertir el carrito en piezas indivisibles ────────────────────
-// Cantidades enteras se separan por unidad; decimales (0.35 m) son atómicas.
 
 function atomizar(carrito) {
     const atomos = [];
@@ -36,7 +21,6 @@ function atomizar(carrito) {
     return atomos;
 }
 
-// Recombinar átomos del mismo producto en líneas con cantidad
 function compactar(atomosGrupo) {
     const porProd = {};
     atomosGrupo.forEach(a => {
@@ -47,30 +31,19 @@ function compactar(atomosGrupo) {
     return Object.values(porProd);
 }
 
-// ─── REPARTO SIMPLE (venta de contado): solo grupos nuevos ───────────────────
 
 export function dividirCarrito(carrito, limite = LIMITE_EFECTIVO) {
     const { existentes, nuevas } = repartirEnNotas(carrito, [], limite);
-    return nuevas; // sin notas previas, todo son grupos nuevos
+    return nuevas;
 }
-
-// ─── REPARTO EN NOTAS (fiado): primero llenar notas existentes ────────────────
-// notasPendientes: deudas del cliente con status != PAID y total < limite.
-// Devuelve:
-//   existentes: [{ debt, atomos, items, delta, nuevoTotal }]
-//   nuevas:     [{ items, total, excedido }]
 
 export function repartirEnNotas(carrito, notasPendientes = [], limite = LIMITE_EFECTIVO) {
     const atomos = atomizar(carrito);
 
-    // Productos que ni solos caben bajo el límite → nota propia, marcada
-    const excedidos = atomos.filter(a => a.monto >= limite);
+   const excedidos = atomos.filter(a => a.monto >= limite);
     const normales  = atomos.filter(a => a.monto < limite);
     normales.sort((a, b) => b.monto - a.monto); // los caros primero
 
-    // Bins existentes: notas pendientes con espacio.
-    // Se ordenan por espacio ASCENDENTE: primero se rellenan las más llenas
-    // (mejor aprovechamiento: se "cierran" notas en lugar de dejar huecos).
     const binsExist = notasPendientes
         .map(d => ({ debt: d, base: Number(d.totalAmount), delta: 0, atomos: [] }))
         .sort((a, b) => (limite - a.base) - (limite - b.base));
@@ -78,11 +51,8 @@ export function repartirEnNotas(carrito, notasPendientes = [], limite = LIMITE_E
     const binsNuevos = [];
 
     normales.forEach(a => {
-        // 1º intentar notas existentes
         let bin = binsExist.find(b => b.base + b.delta + a.monto < limite);
-        // 2º intentar notas nuevas ya abiertas en este reparto
         if (!bin) bin = binsNuevos.find(b => b.total + a.monto < limite);
-        // 3º abrir nota nueva
         if (!bin) { bin = { total: 0, atomos: [], nuevo: true }; binsNuevos.push(bin); }
 
         bin.atomos.push(a);
@@ -108,12 +78,8 @@ export function repartirEnNotas(carrito, notasPendientes = [], limite = LIMITE_E
     return { existentes, nuevas };
 }
 
-// ─── FIADO: flujo completo ────────────────────────────────────────────────────
-// Reparte el carrito entre las notas pendientes del cliente y notas nuevas,
-// previsualiza, y ejecuta. Devuelve 'CANCELADO' o un resumen {agregadas, creadas}.
 
 export async function procesarDeudaEnNotas(carrito, clienteId, nota, totalNum) {
-    // 1. Notas pendientes del cliente con espacio disponible
     let pendientes = [];
     try {
         const deudas = await fetchAPI(`/debts/customer/${clienteId}`);
@@ -123,8 +89,6 @@ export async function procesarDeudaEnNotas(carrito, clienteId, nota, totalNum) {
 
     const plan = repartirEnNotas(carrito, pendientes);
 
-    // 2. Caso trivial: nada que agregar a notas previas y una sola nota nueva
-    //    normal → no hace falta previsualización, se ejecuta directo.
     const trivial = plan.existentes.length === 0
         && plan.nuevas.length === 1 && !plan.nuevas[0].excedido;
 
@@ -183,7 +147,6 @@ export async function procesarDeudaEnNotas(carrito, clienteId, nota, totalNum) {
         if (!conf.isConfirmed) return 'CANCELADO';
     }
 
-    // 3. Ejecutar
     const totalPasos = plan.existentes.length + plan.nuevas.length;
     Swal.fire({ title: 'Registrando fiado...',
         html: `<div class="spinner-border text-warning"></div>
@@ -199,7 +162,6 @@ export async function procesarDeudaEnNotas(carrito, clienteId, nota, totalNum) {
     };
 
     try {
-        // 3a. Agregar a notas existentes
         for (const e of plan.existentes) {
             const deuda = await fetchAPI(`/debts/${e.debt.id}/agregar-items`, {
                 method: 'POST',
@@ -216,7 +178,6 @@ export async function procesarDeudaEnNotas(carrito, clienteId, nota, totalNum) {
                 nuevoTotal: Number(deuda.totalAmount) });
             avanzar();
         }
-        // 3b. Crear notas nuevas (venta DEUDA + deuda), como el flujo normal
         for (const g of plan.nuevas) {
             const venta = await fetchAPI('/sales', { method: 'POST', body: {
                 customerId: clienteId, paymentMethod: 'DEUDA', amountReceived: 0,
@@ -245,7 +206,6 @@ export async function procesarDeudaEnNotas(carrito, clienteId, nota, totalNum) {
         return { agregadas, creadas, error: true };
     }
 
-    // 4. Resumen
     await Swal.fire({
         icon: 'warning', title: '¡Fiado registrado!',
         html: `<div class="text-start">
@@ -267,9 +227,6 @@ export async function procesarDeudaEnNotas(carrito, clienteId, nota, totalNum) {
     });
     return { agregadas, creadas };
 }
-
-// ─── CONTADO EN EFECTIVO: flujo completo (igual que antes) ────────────────────
-// Devuelve 'UNA_SOLA' | 'CANCELADO' | [ventas creadas]
 
 export async function procesarVentaDividida(carrito, clienteSeleccionado, recibido, totalNum) {
     const pregunta = await Swal.fire({

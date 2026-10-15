@@ -1,15 +1,7 @@
-// ═════════════════════════════════════════════════════════════════════════════
-//  AYUDA DE MOSTRADOR — botón "?" flotante, visible en todas las pantallas
-//
-//  Guía en español llano para quien atiende la caja, pensada para poder
-//  resolver el día SIN llamarle al dueño... y con los teléfonos a la mano
-//  para cuando sí haga falta.
-//
-//  ⚠️ EDITA AQUÍ los datos de contacto del negocio:
-// ═════════════════════════════════════════════════════════════════════════════
+
 const CONTACTOS = [
-    { quien: 'Dueño (Luis)',            tel: '667-XXX-XXXX' },   // ← EDITA
-    { quien: 'Carlos Omar',     tel: '697-102-1030' },   // ← EDITA
+    { quien: 'Dueño (Luis)',            tel: '667-XXX-XXXX' },   
+    { quien: 'Carlos Omar',     tel: '697-102-1030' },   
 ];
 
 export function instalarBotonAyuda() {

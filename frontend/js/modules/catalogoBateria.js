@@ -1,6 +1,6 @@
 
 import { fetchAPI } from '../services/api.js';
-//BATERIASSS
+
 export function initCatalogosBaterias(container) {
     container.innerHTML = `0
         <div class="text-white text-center py-4 mb-4 rounded-3"
@@ -72,12 +72,10 @@ export function initCatalogosBaterias(container) {
         <div id="resultados-baterias" class="mt-4"></div>
     `;
 
-    // Disparar la inicialización de los eventos y la carga inicial de los selectores
     inicializarEventosBaterias();
     cargarMarcasBaterias();
 }
 
-// ─── LÓGICA DE CONTROLADORES Y SELECTS EN CASCADA ─────────────────────────────
 
 async function cargarMarcasBaterias() {
     try {
@@ -99,7 +97,6 @@ function inicializarEventosBaterias() {
     const selAnio   = document.getElementById('bat-sel-anio');
     const btnBuscar = document.getElementById('bat-btn-buscar');
 
-    // Cascada 1: Al cambiar la Marca -> Carga los Modelos
     selMarca.addEventListener('change', async () => {
         resetSelectBaterias(selModelo); 
         resetSelectBaterias(selAnio);
@@ -111,7 +108,6 @@ function inicializarEventosBaterias() {
         } catch (e) { console.error(e); }
     });
 
-    // Cascada 2: Al cambiar el Modelo -> Carga los Rangos de Años del PDF
     selModelo.addEventListener('change', async () => {
         resetSelectBaterias(selAnio);
         btnBuscar.disabled = true;
@@ -123,12 +119,10 @@ function inicializarEventosBaterias() {
         } catch (e) { console.error(e); }
     });
 
-    // Activar botón de envío al completar la cascada
     selAnio.addEventListener('change', () => {
         btnBuscar.disabled = !selAnio.value;
     });
 
-    // Evento de click para búsqueda estructurada
     btnBuscar.addEventListener('click', async () => {
         const params = new URLSearchParams({
             marca:     selMarca.value,
@@ -143,7 +137,6 @@ function inicializarEventosBaterias() {
         }
     });
 
-    // Eventos para la búsqueda dinámica libre
     const inputDinamico = document.getElementById('bat-input-dinamico');
     document.getElementById('bat-btn-buscar-dinamico').addEventListener('click', () => buscarBateriasDinamico());
     inputDinamico.addEventListener('keydown', (e) => { if (e.key === 'Enter') buscarBateriasDinamico(); });
@@ -163,7 +156,6 @@ async function buscarBateriasDinamico() {
     }
 }
 
-// ─── RENDERIZADO DE PLANTILLAS CARD (RESULTADOS) ──────────────────────────────
 
 function mostrarResultadosBaterias(resultados, titulo) {
     const contenedor = document.getElementById('resultados-baterias');
@@ -239,7 +231,6 @@ function mostrarErrorBaterias(msg) {
         </div>`;
 }
 
-// ─── COMPONENTES AUXILIARES DE SELECTS ────────────────────────────────────────
 
 function poblarSelectBaterias(sel, valores) {
     sel.innerHTML = `<option value="">— Selecciona —</option>`;

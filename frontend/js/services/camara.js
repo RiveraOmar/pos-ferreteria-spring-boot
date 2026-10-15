@@ -1,15 +1,5 @@
 import { APP_CONFIG, getAuthHeader } from '../config.js';
 
-// ══════════════════════════════════════════════════════════════════════════════
-// CÁMARA — utilidades móviles
-//   1) escanearCodigoBarras()  → abre la cámara, lee un código y devuelve el texto
-//   2) tomarYSubirFoto()       → toma/elige una foto, la sube y devuelve su URL
-// Ambas funcionan en el celular (cámara trasera) y en laptops con webcam.
-// ══════════════════════════════════════════════════════════════════════════════
-
-// ─── 1. ESCÁNER DE CÓDIGO DE BARRAS ───────────────────────────────────────────
-// Usa la API nativa BarcodeDetector cuando existe (Chrome/Android la traen);
-// si no, carპga ZXing desde CDN como respaldo (iOS/Safari, navegadores viejos).
 
 let zxingReader = null;
 
@@ -24,10 +14,6 @@ async function cargarZXing() {
     return window.ZXingBrowser;
 }
 
-/**
- * Abre la cámara en un modal y resuelve con el código leído (string),
- * o null si el usuario cancela.
- */
 export async function escanearCodigoBarras() {
     return new Promise(async (resolve) => {
         // Modal con el video
@@ -80,7 +66,6 @@ export async function escanearCodigoBarras() {
             return;
         }
 
-        // Camino A: BarcodeDetector nativo (rápido, sin descargas)
         if ('BarcodeDetector' in window) {
             try {
                 const detector = new window.BarcodeDetector({
@@ -96,15 +81,14 @@ export async function escanearCodigoBarras() {
                             cerrar(codes[0].rawValue);
                             return;
                         }
-                    } catch (e) { /* seguir intentando */ }
+                    } catch (e) { }
                     requestAnimationFrame(loop);
                 };
                 loop();
                 return;
-            } catch (e) { /* cae al respaldo ZXing */ }
+            } catch (e) {  }
         }
 
-        // Camino B: ZXing (respaldo universal)
         try {
             estado.textContent = 'Cargando lector...';
             const ZX = await cargarZXing();
@@ -123,18 +107,13 @@ export async function escanearCodigoBarras() {
     });
 }
 
-// ─── 2. TOMAR Y SUBIR FOTO ─────────────────────────────────────────────────────
-/**
- * Abre el selector de cámara/galería del dispositivo, sube la imagen elegida
- * al servidor y resuelve con la URL pública (ej. "/uploads/prod_ab12.jpg"),
- * o null si se cancela. Muestra su propio indicador de progreso.
- */
+
 export function tomarYSubirFoto() {
     return new Promise((resolve) => {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
-        input.capture = 'environment'; // sugiere la cámara trasera en móvil
+        input.capture = 'environment'; 
         input.style.display = 'none';
         document.body.appendChild(input);
 
@@ -154,10 +133,9 @@ export function tomarYSubirFoto() {
                 fd.append('file', file);
                 const resp = await fetch(APP_CONFIG.API_BASE + '/uploads/producto-imagen', {
                     method: 'POST',
-                    headers: { 'Authorization': getAuthHeader() }, // NO poner Content-Type: el navegador lo pone con boundary
+                    headers: { 'Authorization': getAuthHeader() }, 
                     body: fd
                 });
-                // El backend puede responder texto (no JSON) en errores de servidor
                 let data = {};
                 try { data = await resp.json(); }
                 catch (e) { data = { error: `El servidor respondió ${resp.status}` }; }
@@ -170,14 +148,11 @@ export function tomarYSubirFoto() {
             }
         };
 
-        // Si el usuario cierra el selector sin elegir, limpiar
         input.oncancel = () => { input.remove(); resolve(null); };
         input.click();
     });
 }
 
-// Convierte una URL relativa (/uploads/..) en absoluta hacia el backend,
-// para mostrar la imagen correctamente desde el móvil.
 export function urlImagenCompleta(url) {
     if (!url) return '';
     if (url.startsWith('http') || url.startsWith('data:')) return url;

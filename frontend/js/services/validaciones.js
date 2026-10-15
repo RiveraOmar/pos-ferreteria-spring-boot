@@ -1,17 +1,8 @@
-/**
- * ─── VALIDACIONES FRONTEND — FerrePOS ────────────────────────────────────────
- * Cubre: texto, números, RFC, email, teléfono, precios, cantidades, URLs,
- *        códigos postales, SKUs, descuentos y validaciones cruzadas.
- * Todas muestran error visual con Bootstrap is-invalid + mensaje debajo.
- */
-
-// ─── HELPERS INTERNOS ─────────────────────────────────────────────────────────
 
 function marcarError(el, mensaje) {
     if (!el) return;
     el.classList.remove('is-valid');
     el.classList.add('is-invalid');
-    // Eliminar mensaje previo si existe
     el.parentElement?.querySelector('.invalid-feedback')?.remove();
     const div = document.createElement('div');
     div.className   = 'invalid-feedback d-block';
@@ -30,20 +21,15 @@ function getEl(id) {
     return typeof id === 'string' ? document.getElementById(id) : id;
 }
 
-// ─── 1. TEXTO GENERAL ─────────────────────────────────────────────────────────
-/**
- * Valida texto: requerido, longitud, patrón.
- * patronSolo: si true, rechaza caracteres no permitidos en tiempo real
- */
 export function validarTexto(id, {
     minLen    = 1,
     maxLen    = 500,
     requerido = true,
     label     = 'Campo',
-    patron    = null,       // RegExp string para validar el valor completo
-    soloLetras = false,     // Solo letras, espacios y caracteres latinos
-    noEspeciales = false,   // Sin caracteres especiales peligrosos
-    permitirComillas = false // Deja pasar " y ' — para medidas: 1/2" x 3"
+    patron    = null,      
+    soloLetras = false,     
+    noEspeciales = false,   
+    permitirComillas = false 
 } = {}) {
     const el  = getEl(id);
     const val = el?.value?.trim() || '';
@@ -65,16 +51,7 @@ export function validarTexto(id, {
         return false;
     }
 
-    // Rechazar caracteres peligrosos (SQL injection, XSS básico).
-    //
-    // Con permitirComillas se dejan pasar " y ' porque en una ferretería son
-    // parte del dato: 1/2" x 3" ES la medida, no un intento de ataque. Lo que
-    // de verdad importa bloquear sigue fuera: < > (etiquetas HTML), el acento
-    // invertido (plantillas de JS) y la barra invertida (escapes).
-    //
-    // Esto es seguro SOLO porque el módulo que lo usa escapa el texto al
-    // pintarlo. Si se activa en una pantalla que interpola sin escapar, un
-    // nombre con comillas le va a romper la fila.
+    
     const CHARS_PELIGROSOS = permitirComillas
         ? /[<>`\\]/
         : /[<>'"`;\\]/;
@@ -99,14 +76,13 @@ export function validarTexto(id, {
     return true;
 }
 
-// ─── 2. NÚMEROS ───────────────────────────────────────────────────────────────
 export function validarNumero(id, {
     min       = 0,
     max       = null,
     decimales = 2,
     requerido = true,
     label     = 'Campo',
-    entero    = false     // Solo enteros (sin decimales)
+    entero    = false    
 } = {}) {
     const el  = getEl(id);
     const raw = el?.value?.trim() || '';
@@ -152,7 +128,6 @@ export function validarNumero(id, {
     return true;
 }
 
-// ─── 3. PRECIO (no puede ser 0 si es requerido) ───────────────────────────────
 export function validarPrecio(id, {
     label     = 'Precio',
     requerido = true,
@@ -183,17 +158,12 @@ export function validarPrecio(id, {
     return true;
 }
 
-// ─── 4. VALIDACIÓN CRUZADA: costo vs precio de venta ────────────────────────
-/**
- * Valida que el precio de venta sea >= costo (evitar vender a pérdida sin aviso).
- * Retorna true siempre (solo advierte, no bloquea — es decisión del negocio).
- */
+
 export function validarCostoVsPrecio(idCosto, idPrecio) {
     const costo  = parseFloat(getEl(idCosto)?.value  || '0') || 0;
     const precio = parseFloat(getEl(idPrecio)?.value || '0') || 0;
     if (costo > 0 && precio > 0 && precio < costo) {
         const elPrecio = getEl(idPrecio);
-        // Solo advertencia visual — no bloquea
         elPrecio?.classList.remove('is-valid');
         elPrecio?.classList.add('is-invalid');
         elPrecio?.parentElement?.querySelector('.invalid-feedback')?.remove();
@@ -202,12 +172,11 @@ export function validarCostoVsPrecio(idCosto, idPrecio) {
         div.style.color = '#d97706';
         div.innerHTML   = `⚠ El precio de venta ($${precio.toFixed(2)}) es menor al costo ($${costo.toFixed(2)}). ¿Es correcto?`;
         getEl(idPrecio)?.after(div);
-        return false; // Retorna false para que el llamador decida si bloquear
+        return false; 
     }
     return true;
 }
 
-// ─── 5. RFC MEXICANO ──────────────────────────────────────────────────────────
 export function validarRFC(id, requerido = false) {
     const el  = getEl(id);
     const val = el?.value?.trim().toUpperCase() || '';
@@ -220,7 +189,6 @@ export function validarRFC(id, requerido = false) {
         return false;
     }
 
-    // Caracteres extraños
     if (/[^A-ZÑ&0-9]/.test(val)) {
         marcarError(el, 'RFC solo puede contener letras, números y &');
         return false;
@@ -239,7 +207,6 @@ export function validarRFC(id, requerido = false) {
     return false;
 }
 
-// ─── 6. EMAIL ─────────────────────────────────────────────────────────────────
 export function validarEmail(id, requerido = false) {
     const el  = getEl(id);
     const val = el?.value?.trim() || '';
@@ -252,7 +219,6 @@ export function validarEmail(id, requerido = false) {
         return false;
     }
 
-    // Caracteres especiales peligrosos
     if (/[<>'"`;\\]/.test(val)) {
         marcarError(el, 'El email contiene caracteres no permitidos');
         return false;
@@ -273,7 +239,6 @@ export function validarEmail(id, requerido = false) {
     return true;
 }
 
-// ─── 7. TELÉFONO MEXICANO ─────────────────────────────────────────────────────
 export function validarTelefono(id, requerido = true) {
     const el  = getEl(id);
     const val = el?.value?.replace(/\D/g, '') || ''; // Solo dígitos
@@ -296,7 +261,6 @@ export function validarTelefono(id, requerido = true) {
         return false;
     }
 
-    // Primer dígito no puede ser 0 ni 1
     if (['0','1'].includes(val[0])) {
         marcarError(el, 'Teléfono inválido (no puede iniciar con 0 o 1)');
         return false;
@@ -306,7 +270,6 @@ export function validarTelefono(id, requerido = true) {
     return true;
 }
 
-// ─── 8. CÓDIGO POSTAL MEXICANO ────────────────────────────────────────────────
 export function validarCodigoPostal(id, requerido = false) {
     const el  = getEl(id);
     const val = el?.value?.trim() || '';
@@ -328,9 +291,6 @@ export function validarCodigoPostal(id, requerido = false) {
     return true;
 }
 
-// ─── 9. SKU / CÓDIGO DE PRODUCTO ─────────────────────────────────────────────
-// Aquí NO se permiten comillas a propósito: el SKU se imprime en etiquetas, se
-// escanea y se usa dentro de URLs. Las medidas van en el nombre, no en el código.
 export function validarSKU(id, requerido = true) {
     const el  = getEl(id);
     const val = el?.value?.trim() || '';
@@ -348,7 +308,6 @@ export function validarSKU(id, requerido = true) {
         return false;
     }
 
-    // Solo alfanumérico, guiones y guiones bajos
     if (!/^[a-zA-Z0-9\-_\.]+$/.test(val)) {
         marcarError(el, 'SKU solo puede contener letras, números, guiones y puntos');
         return false;
@@ -358,7 +317,6 @@ export function validarSKU(id, requerido = true) {
     return true;
 }
 
-// ─── 10. CANTIDAD ENTERA (stock, restock) ────────────────────────────────────
 export function validarCantidad(id, { min = 1, max = null, label = 'Cantidad' } = {}) {
     const el  = getEl(id);
     const raw = el?.value?.trim() || '';
@@ -400,7 +358,6 @@ export function validarCantidad(id, { min = 1, max = null, label = 'Cantidad' } 
     return true;
 }
 
-// ─── 11. URL DE IMAGEN ────────────────────────────────────────────────────────
 export function validarURL(id, requerido = false) {
     const el  = getEl(id);
     const val = el?.value?.trim() || '';
@@ -428,7 +385,6 @@ export function validarURL(id, requerido = false) {
     return true;
 }
 
-// ─── 12. DESCUENTO (0-100%) ───────────────────────────────────────────────────
 export function validarDescuento(id, requerido = false) {
     const el  = getEl(id);
     const raw = el?.value?.trim() || '';
@@ -459,7 +415,6 @@ export function validarDescuento(id, requerido = false) {
     return true;
 }
 
-// ─── 13. SELECT REQUERIDO ─────────────────────────────────────────────────────
 export function validarSelect(id, label = 'Campo') {
     const el  = getEl(id);
     const val = el?.value || '';
@@ -475,7 +430,6 @@ export function validarSelect(id, label = 'Campo') {
     return true;
 }
 
-// ─── 14. MONTO DE PAGO ────────────────────────────────────────────────────────
 export function validarMontoPago(id, totalRequerido, label = 'Monto') {
     const el  = getEl(id);
     const raw = el?.value?.trim() || '';
@@ -500,7 +454,6 @@ export function validarMontoPago(id, totalRequerido, label = 'Monto') {
     return true;
 }
 
-// ─── 15. LIMPIAR TODAS LAS VALIDACIONES DE UN FORM ───────────────────────────
 export function limpiarValidaciones(formId) {
     const form = typeof formId === 'string'
         ? document.getElementById(formId)
@@ -511,21 +464,7 @@ export function limpiarValidaciones(formId) {
         .forEach(el => el.remove());
 }
 
-// ─── 16. SANITIZAR TEXTO (limpiar antes de enviar al backend) ────────────────
-/**
- * Limpia un string: elimina espacios extra, caracteres peligrosos.
- * Úsalo en el payload antes de fetchAPI.
- *
- * permitirComillas deja pasar " y ' porque en ferretería son el dato mismo:
- * Tornillo 1/2" x 3". Se usa SOLO en los campos donde hacen falta — nombre y
- * descripción de producto, y valores de atributos.
- *
- * No se activó por defecto A PROPÓSITO: sanitizar() la usa TODO el sistema, y
- * los módulos que todavía pintan texto sin escapar se romperían con una
- * comilla en el dato (una comilla doble cierra el atributo HTML a media
- * instrucción y deja el botón de la fila muerto — es justo lo que pasó con
- * el botón de Abastecer cuando entraron los tornillos).
- */
+
 export function sanitizar(texto, { permitirComillas = false } = {}) {
     if (!texto) return '';
     const peligrosos = permitirComillas ? /[<>`\\]/g : /[<>'"`;\\]/g;
@@ -536,22 +475,13 @@ export function sanitizar(texto, { permitirComillas = false } = {}) {
         .substring(0, 1000);                   // máximo de seguridad
 }
 
-// ─── 17. PREVENIR CARACTERES EN TIEMPO REAL ───────────────────────────────────
-/**
- * Agrégalo en oninput o addEventListener('input') de cualquier campo.
- * Llama: aplicarFiltroInput(el, 'soloNumeros')
- * Tipos: 'soloNumeros', 'soloLetras', 'alfanumerico', 'sinEspeciales',
- *        'conMedidas', 'telefono', 'sku'
- */
+
 export function aplicarFiltroInput(el, tipo) {
     const filtros = {
         soloNumeros:   (v) => v.replace(/[^\d]/g, ''),
         soloLetras:    (v) => v.replace(/[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s\-]/g, ''),
         alfanumerico:  (v) => v.replace(/[^a-zA-Z0-9\s\-_\.áéíóúÁÉÍÓÚüÜñÑ]/g, ''),
         sinEspeciales: (v) => v.replace(/[<>'"`;\\]/g, ''),
-        // Como sinEspeciales, pero DEJA las comillas: en ferretería 1/2" es
-        // la medida. Se usa en nombre y descripción de producto, y en los
-        // valores de los atributos dinámicos.
         conMedidas:    (v) => v.replace(/[<>`\\]/g, ''),
         telefono:      (v) => v.replace(/[^\d]/g, '').slice(0, 10),
         sku:           (v) => v.replace(/[^a-zA-Z0-9\-_\.]/g, '').slice(0, 50),

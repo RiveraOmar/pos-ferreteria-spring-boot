@@ -1,7 +1,4 @@
-/**
- * SearchSelect — reemplaza los <select> con búsqueda en tiempo real
- * Campos buscables: label, sub, extra (todos opcionales excepto label)
- */
+
 export class SearchSelect {
     constructor({ input, dropdown, items = [], onSelect, placeholder = 'Buscar...' }) {
         this.input     = input;
@@ -54,7 +51,6 @@ export class SearchSelect {
             }
         });
 
-        // Navegación teclado
         this.input.addEventListener('keydown', (e) => {
             const items  = this.dropdown.querySelectorAll('.search-dropdown-item:not(.disabled)');
             const active = this.dropdown.querySelector('.search-dropdown-item.active');

@@ -4,30 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FerrePOS — Punto de venta</title>
-    <!-- ═══ LIBRERÍAS, DESDE ESTA MISMA MÁQUINA ═══════════════════════════
-         Antes se pedían a cdn.jsdelivr.net en CADA arranque. Sin internet el
-         sistema abría sin diseño y — lo grave — sin SweetAlert2: cada
-         confirmación (cobrar, borrar, surtir) tronaba con "Swal is not
-         defined" y la caja quedaba inservible.
-         Los archivos viven en vendor\ y los baja descargar_librerias.bat.
-         ═══════════════════════════════════════════════════════════════════ -->
     <link href="vendor/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="vendor/bootstrap-icons/bootstrap-icons.css">
     <link href="vendor/swal-bootstrap-4.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
-    <!-- Tema Mostrador AZ: identidad azul acero/carbón para toda la app -->
-    <!-- La fuente SÍ se deja en internet a propósito: sin conexión el
-         navegador cae en 'Arial Narrow', que ya viene como respaldo en
-         theme-az.css. Se ve casi igual y no rompe nada. -->
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/theme-az.css">
-    <!-- Menú lateral de tres posiciones: fijo / iconos / oculto -->
     <link rel="stylesheet" href="css/sidebar-menu.css">
     <link rel="icon" href="data:,">
 </head>
 <body class="menu-oculto">
-<!-- Se aplica el modo guardado ANTES de que se dibuje nada, para que no
-     se vea el menú un instante y luego desaparezca de golpe. -->
+
 <script>
     try {
         var m = localStorage.getItem('ferrepos_modo_menu');
@@ -36,14 +23,12 @@
                 document.body.className.replace(/\bmenu-(fijo|riel|oculto)\b/g, '').trim()
                 + ' menu-' + m;
         }
-    } catch (e) { /* sin localStorage, se queda el modo por defecto */ }
+    } catch (e) {  }
 </script>
 
-<!-- Botón de menú móvil (solo visible en pantallas chicas) -->
 <button id="btn-menu-movil" aria-label="Abrir menú"><i class="bi bi-list"></i></button>
 <div id="overlay-sidebar"></div>
 
-<!-- Jaladera del borde izquierdo y velo (solo en modo oculto, escritorio) -->
 <div id="zona-menu" title="Menú (Ctrl + B)"></div>
 <button id="btn-cajon" type="button" aria-label="Abrir menú" aria-expanded="false"
         title="Abrir menú (Ctrl + B)"><i class="bi bi-list"></i></button>
@@ -51,11 +36,8 @@
 
 <div class="d-flex vh-100 w-100 overflow-hidden" style="max-width:100%">
 
-    <!-- ─── SIDEBAR ──────────────────────────────────────────────────────── -->
     <aside class="d-flex flex-column flex-shrink-0 p-3 sidebar">
 
-        <!-- Logo / marca (debe seguir siendo el primer hijo: style.css le
-             pinta la placa de acero con el selector .sidebar > a:first-child) -->
         <a href="#" class="marca d-flex align-items-center mb-4 text-white text-decoration-none">
             <div style="width:38px;height:38px;border-radius:11px;
                         display:flex;align-items:center;justify-content:center;margin-right:11px">
@@ -68,10 +50,8 @@
             </div>
         </a>
 
-        <!-- Menú principal -->
         <ul class="nav nav-pills flex-column mb-auto" id="main-menu">
 
-            <!-- PRINCIPAL -->
             <li class="nav-item"><span class="nav-link disabled">Principal</span></li>
             <li class="nav-item">
                 <a href="#" class="nav-link" data-module="dashboard" title="Dashboard">
@@ -89,7 +69,6 @@
                 </a>
             </li>
 
-            <!-- INVENTARIO -->
             <li class="nav-item"><span class="nav-link disabled">Inventario</span></li>
             <li class="nav-item">
                 <a href="#" class="nav-link" data-module="productos" title="Productos">
@@ -110,7 +89,6 @@
                 </a>
             </li>
 
-            <!-- COMPRAS Y CLIENTES -->
             <li class="nav-item"><span class="nav-link disabled">Compras y clientes</span></li>
             <li class="nav-item">
                 <a href="#" class="nav-link" data-module="compras" title="Registrar compra">
@@ -136,7 +114,6 @@
                 </a>
             </li>
 
-            <!-- GESTIÓN -->
             <li class="nav-item"><span class="nav-link disabled">Gestión</span></li>
             <li class="nav-item">
                 <a href="#" class="nav-link d-flex align-items-center gap-2"
@@ -168,7 +145,6 @@
             </li>
         </ul>
 
-        <!-- Footer sidebar -->
         <div class="mt-auto pt-2">
             <hr style="border-color:rgba(255,255,255,.08)">
 
@@ -195,11 +171,9 @@
         </div>
     </aside>
 
-    <!-- ─── CONTENIDO PRINCIPAL ───────────────────────────────────────────── -->
     <main class="flex-grow-1 p-4 overflow-auto" id="main-content"></main>
 </div>
 
-<!-- Toasts -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
     <div id="liveToast" class="toast align-items-center text-white border-0 shadow" role="alert">
         <div class="d-flex">
@@ -210,15 +184,11 @@
     </div>
 </div>
 
-<!-- Van ANTES de app.js: sin ellas, el primer Swal.fire() de cualquier
-     módulo truena. -->
+
 <script src="vendor/bootstrap.bundle.min.js"></script>
 <script src="vendor/sweetalert2.all.min.js"></script>
 <script type="module" src="js/app.js"></script>
-<!-- Menú lateral. Va como type="module" A PROPÓSITO: así corre DESPUÉS de
-     app.js (que también es módulo) y no al revés. Si fuera un script
-     normal correría antes, y cualquier cosa que app.js le haga al <body>
-     al arrancar pisaría la configuración del menú. -->
+
 <script type="module" src="js/sidebar-menu.js"></script>
 </body>
 </html>

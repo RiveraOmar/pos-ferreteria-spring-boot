@@ -1,11 +1,4 @@
-// ═════════════════════════════════════════════════════════════════════════════
-//  CATÁLOGO AUTOMOTRIZ — bandas, bombas de agua, tensores, tapones,
-//  termostatos, mangueras... · 62 marcas · ~27,000 aplicaciones
-//
-//  Dos búsquedas:
-//   1) Por VEHÍCULO: marca → modelo → todas sus partes
-//   2) Por NÚMERO DE PARTE: "K060824" → en qué vehículos se usa
-// ═════════════════════════════════════════════════════════════════════════════
+
 import { fetchAPI } from '../services/api.js';
 
 export function initCatalogoAuto(container) {
