@@ -11,7 +11,6 @@ import java.util.List;
 @Repository
 public interface CatalogoFiltrosRepository extends JpaRepository<CatalogoFiltros, Long> {
 
-    // Selects en cascada
     @Query("SELECT DISTINCT c.tipo FROM CatalogoFiltros c ORDER BY c.tipo")
     List<String> findDistinctTipos();
 
@@ -27,11 +26,9 @@ public interface CatalogoFiltrosRepository extends JpaRepository<CatalogoFiltros
     @Query("SELECT DISTINCT c.motor FROM CatalogoFiltros c WHERE c.tipo = :tipo AND c.marca = :marca AND c.modelo = :modelo AND :anio BETWEEN c.anioInicio AND c.anioFin ORDER BY c.motor")
     List<String> findDistinctMotoresByTipoMarcaModeloAnio(@Param("tipo") String tipo, @Param("marca") String marca, @Param("modelo") String modelo, @Param("anio") Integer anio);
 
-    // Búsqueda por vehículo completo
     @Query("SELECT c FROM CatalogoFiltros c WHERE c.tipo = :tipo AND c.marca = :marca AND c.modelo = :modelo AND :anio BETWEEN c.anioInicio AND c.anioFin AND c.motor = :motor")
     List<CatalogoFiltros> findByVehiculo(@Param("tipo") String tipo, @Param("marca") String marca, @Param("modelo") String modelo, @Param("anio") Integer anio, @Param("motor") String motor);
 
-    // Búsqueda dinámica por texto libre
     @Query("SELECT c FROM CatalogoFiltros c WHERE " +
             "LOWER(c.marca) LIKE LOWER(CONCAT('%',:q,'%')) OR " +
             "LOWER(c.modelo) LIKE LOWER(CONCAT('%',:q,'%')) OR " +
@@ -40,7 +37,6 @@ public interface CatalogoFiltrosRepository extends JpaRepository<CatalogoFiltros
             "ORDER BY c.marca, c.modelo, c.anioFin DESC")
     List<CatalogoFiltros> findByTextoLibre(@Param("q") String q);
 
-    // Búsqueda por equivalente (parte competidor)
     @Query(value = "SELECT cf.* FROM catalogo_filtros cf " +
             "JOIN catalogo_equivalencias ce ON ce.parte_gonher IN " +
             "(cf.filtro_aceite, cf.filtro_aceite_sin, cf.filtro_aire, cf.filtro_combustible, cf.filtro_cabina) " +

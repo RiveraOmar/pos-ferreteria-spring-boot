@@ -9,7 +9,6 @@ import java.util.List;
 
 public interface CatalogoBirloRepository extends JpaRepository<CatalogoBirlo, String> {
 
-    // Búsqueda por Ø de estría con tolerancia (el vernier nunca es exacto)
     @Query("""
         SELECT b FROM CatalogoBirlo b
         WHERE b.estriaMm BETWEEN :mmMin AND :mmMax

@@ -10,6 +10,5 @@ import java.util.List;
 public interface InventoryAdjustmentRepository
         extends JpaRepository<InventoryAdjustment, Long> {
 
-    /** Historial de ajustes de un producto, del más reciente al más viejo. */
     List<InventoryAdjustment> findByProductIdOrderByFechaDesc(Long productId);
 }

@@ -16,6 +16,5 @@ public interface SupplierProductRepository extends JpaRepository<SupplierProduct
 
     Optional<SupplierProduct> findBySupplierIdAndProductId(Long supplierId, Long productId);
 
-    // Al borrar un producto se sueltan sus proveedores ligados.
     void deleteByProductId(Long productId);
 }

@@ -24,7 +24,6 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     @Query("UPDATE Customer cu SET cu.active = :status WHERE cu.id = :id")
     void updateActiveStatus(@Param("id") Long id, @Param("status") boolean status);
 
-    // ─── phone_number es el nombre real de la columna en la BD ───────────────
     @Query(value = """
     SELECT * FROM customers
     WHERE (

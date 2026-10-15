@@ -18,17 +18,11 @@ public interface CfdiTimbradoRepository extends JpaRepository<CfdiTimbrado, Long
     boolean existsBySaleId(Long saleId);
     boolean existsByPrefacturaId(Long prefacturaId);
 
-    // ── Métodos que DISTINGUEN CFDIs cancelados ──────────────────────────
-    // Un CFDI CANCELADO no debe bloquear la re-facturación de su venta:
-    // cancelar y reemitir es el procedimiento normal del SAT (Apéndice 2).
-    // Los métodos sin filtro de status de arriba tratan un CFDI cancelado
-    // igual que uno vigente — usarlos para validar "¿ya tiene factura?"
-    // dejaba ventas atrapadas para siempre.
+    
     boolean existsBySaleIdAndStatusNot(Long saleId, String status);
     boolean existsByPrefacturaIdAndStatusNot(Long prefacturaId, String status);
     Optional<CfdiTimbrado> findFirstBySaleIdAndStatusNotOrderByFechaTimbradoDesc(
             Long saleId, String status);
-    // El más reciente sin importar status — evita NonUniqueResultException
-    // cuando una venta tiene un CFDI cancelado y uno vigente (reemisión).
+    
     Optional<CfdiTimbrado> findFirstBySaleIdOrderByFechaTimbradoDesc(Long saleId);
 }

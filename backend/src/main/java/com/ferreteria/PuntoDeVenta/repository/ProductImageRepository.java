@@ -7,7 +7,6 @@ import java.util.List;
 
 public interface ProductImageRepository extends JpaRepository<ProductImage, Long> {
 
-    /** Fotos de un producto, ya ordenadas (la principal primero). */
     List<ProductImage> findByProductIdOrderByOrdenAsc(Long productId);
 
     long countByProductId(Long productId);

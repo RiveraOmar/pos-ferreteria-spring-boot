@@ -20,6 +20,5 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     @Query("SELECT i FROM Inventory i WHERE i.product.id = :productId")
     Optional<Inventory> findByProductIdWithLock(@Param("productId") Long productId);
 
-    // Al borrar un producto se va tambien su renglon de existencias.
     void deleteByProductId(Long productId);
 }

@@ -21,11 +21,7 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
             LocalDateTime fin,
             String status);
 
-    // ── Pendientes de factura global (PERIODICIDAD MENSUAL) ──────────────
-    // Antes se traia el dia completo y se filtraba en Java. Con periodo
-    // mensual eso significaba cargar TODAS las ventas del mes (y de los
-    // meses anteriores al buscar rezagadas) solo para descartar casi todas.
-    // Filtrar en la BD deja pasar unicamente lo que de verdad falta timbrar.
+   
     @Query("""
     SELECT s FROM Sale s
     WHERE s.customer.id = :customerId
@@ -40,18 +36,13 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
             @Param("inicio") LocalDateTime inicio,
             @Param("fin") LocalDateTime fin);
 
-    // ── Trazabilidad factura global → tickets ────────────────────────────
     List<Sale> findByCfdiGlobalIdOrderByCreatedAtAsc(Long cfdiGlobalId);
     long countByCfdiGlobalId(Long cfdiGlobalId);
 
-    // ── Folio consecutivo de tickets ─────────────────────────────────────
-    // Usa una secuencia de PostgreSQL: es atómica, por lo que dos ventas
-    // simultáneas NUNCA obtienen el mismo número (a diferencia de MAX+1).
-    // Requiere ejecutar antes: migracion_folios.sql
+    
     @Query(value = "SELECT nextval('seq_ticket_folio')", nativeQuery = true)
     Long siguienteFolioTicket();
 
-    // Siempre recibe valores concretos (nunca null) — el controller pone defaults
     @Query(value = """
     SELECT s.* FROM sales s
     LEFT JOIN customers c ON c.id = s.customer_id
