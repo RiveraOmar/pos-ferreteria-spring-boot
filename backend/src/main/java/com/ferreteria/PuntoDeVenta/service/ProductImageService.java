@@ -15,13 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-/**
- * Gestiona la galería de fotos de un producto.
- *
- * Regla clave: la foto de orden 0 es la PRINCIPAL y se copia a
- * Product.imagenUrl. Así todo el código que ya existe (listas, ventas,
- * tickets, dashboard) sigue funcionando sin cambios: siempre lee la principal.
- */
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -33,7 +27,6 @@ public class ProductImageService {
     @Value("${app.uploads.dir:uploads}")
     private String uploadsDir;
 
-    /** Máximo de fotos por producto (evita galerías infinitas y disco lleno). */
     public static final int MAX_FOTOS = 6;
 
     public List<ProductImage> listar(Long productId) {
@@ -55,10 +48,9 @@ public class ProductImageService {
         img.setProductId(productId);
         img.setUrl(url);
         img.setTitulo(titulo != null && !titulo.isBlank() ? titulo.trim() : null);
-        img.setOrden((int) actuales);   // se agrega al final de la galería
+        img.setOrden((int) actuales);   
         img = imageRepository.save(img);
 
-        // Si es la primera foto, también es la principal
         if (actuales == 0) sincronizarPrincipal(product, url);
 
         return img;
@@ -74,7 +66,6 @@ public class ProductImageService {
         imageRepository.delete(img);
         borrarArchivo(img.getUrl());
 
-        // Recompactar el orden y actualizar la principal
         List<ProductImage> resto = imageRepository.findByProductIdOrderByOrdenAsc(productId);
         for (int i = 0; i < resto.size(); i++) {
             resto.get(i).setOrden(i);
@@ -85,7 +76,6 @@ public class ProductImageService {
                 sincronizarPrincipal(p, resto.isEmpty() ? null : resto.get(0).getUrl()));
     }
 
-    /** Marca una foto como principal: pasa a orden 0 y las demás se recorren. */
     @Transactional
     public void marcarPrincipal(Long productId, Long imageId) {
         List<ProductImage> fotos = imageRepository.findByProductIdOrderByOrdenAsc(productId);
@@ -105,7 +95,6 @@ public class ProductImageService {
                 sincronizarPrincipal(p, elegida.getUrl()));
     }
 
-    /** Cambia la etiqueta de una foto ("Frente", "Especificaciones"...). */
     @Transactional
     public void renombrar(Long productId, Long imageId, String titulo) {
         ProductImage img = imageRepository.findById(imageId)
@@ -118,13 +107,11 @@ public class ProductImageService {
         imageRepository.save(img);
     }
 
-    /** Copia la URL de la foto principal al campo clásico Product.imagenUrl. */
     private void sincronizarPrincipal(Product product, String url) {
         product.setImagenUrl(url);
         productRepository.save(product);
     }
 
-    /** Borra el archivo físico del disco (si vive en nuestra carpeta uploads). */
     private void borrarArchivo(String url) {
         try {
             if (url == null || !url.startsWith("/uploads/")) return; // URL externa: no se toca

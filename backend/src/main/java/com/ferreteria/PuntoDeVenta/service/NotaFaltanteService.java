@@ -10,11 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * La libreta de apuntes de Faltantes: cosas que hacen falta pero no están
- * en el catálogo. Texto libre — sin la validación estricta de un producto
- * real, porque aquí el punto es anotar rápido, no capturar con precisión.
- */
+
 @Service
 @RequiredArgsConstructor
 public class NotaFaltanteService {
@@ -44,9 +40,7 @@ public class NotaFaltanteService {
     public NotaFaltante marcarResuelta(Long id, boolean resuelta) {
         NotaFaltante n = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Nota no encontrada: " + id));
-        // Evita marcar dos veces lo mismo sin avisar — mismo criterio que
-        // ya usamos en el resto del sistema para no dar "éxitos" silenciosos.
-        if (n.getResuelta().equals(resuelta)) {
+         if (n.getResuelta().equals(resuelta)) {
             throw new IllegalStateException(
                     resuelta ? "Esta nota ya estaba marcada como resuelta."
                              : "Esta nota ya estaba pendiente.");

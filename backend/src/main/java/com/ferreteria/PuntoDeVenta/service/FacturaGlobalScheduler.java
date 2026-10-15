@@ -15,38 +15,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-/**
- * ═══════════════════════════════════════════════════════════════════════════
- *  TIMBRADO AUTOMÁTICO DE LA FACTURA GLOBAL — PERIODICIDAD CONFIGURABLE
- * ═══════════════════════════════════════════════════════════════════════════
- *
- *  Corre UNA VEZ AL DÍA (hora fija en config/ferrepos.properties). No hace
- *  falta un cron distinto por periodicidad: cada día simplemente revisa
- *  qué periodos (según la periodicidad ACTUAL, la que el dueño configuró
- *  desde el front) ya cerraron y tienen ventas sin facturar, y los timbra.
- *
- *    • Periodicidad DIARIA   → cada corrida timbra el día de ayer.
- *    • Periodicidad SEMANAL  → timbra la semana pasada, solo el día
- *      siguiente a que termine (los lunes).
- *    • Periodicidad QUINCENAL → timbra la quincena que acaba de cerrar
- *      (días 1 y 16, aunque igual se revisa todos los días por si acaso).
- *    • Periodicidad MENSUAL  → timbra el mes que acaba de cerrar (día 1).
- *
- *  Si el dueño CAMBIA la periodicidad a medio periodo, las ventas ya
- *  agrupadas bajo la periodicidad vieja simplemente se re-agrupan la
- *  próxima vez que se calculan pendientes (no hay estado guardado por
- *  periodo, todo se deriva de las fechas de las ventas al vuelo).
- *
- *  El SAT da 72 horas después del cierre del periodo para expedir la
- *  global, así que correr una vez al día deja margen de sobra.
- *
- *  Configuración (config/ferrepos.properties):
- *    facturaglobal.auto.enabled=true
- *    facturaglobal.auto.cron=0 30 9 * * *
- *
- *  La PERIODICIDAD (diaria/semanal/quincenal/mensual) NO va aquí — se
- *  cambia desde el front en Facturación → Configurar periodicidad.
- */
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -60,8 +29,6 @@ public class FacturaGlobalScheduler {
             "${facturaglobal.auto.enabled:true}")
     private boolean habilitado;
 
-    // Corre todos los días a la misma hora — la periodicidad activa decide
-    // sola qué periodo ya cerró y toca timbrar. Configurable en properties.
     @Scheduled(cron = "${facturaglobal.auto.cron:0 30 9 * * *}",
             zone = "America/Mazatlan")
     public void timbrarGlobalAutomatica() {
@@ -112,9 +79,7 @@ public class FacturaGlobalScheduler {
             return List.of();
         }
 
-        // Agrupar por periodo (misma periodicidad que "ref") — cada uno va
-        // en su propia global, porque InformacionGlobal lleva un solo Mes/Año.
-        Map<PeriodoFiscal, List<Sale>> porPeriodo = pendientes.stream()
+         Map<PeriodoFiscal, List<Sale>> porPeriodo = pendientes.stream()
                 .collect(Collectors.groupingBy(
                         v -> PeriodoFiscal.deLocalDateTime(ref.tipo(), v.getCreatedAt()),
                         TreeMap::new,

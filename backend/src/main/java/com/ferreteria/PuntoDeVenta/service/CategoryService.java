@@ -19,9 +19,6 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
 
-    /**
-     * Convierte una entidad Category a CategoryDTO.
-     */
     private CategoryDTO toDTO(Category cat) {
         return new CategoryDTO(
                 cat.getId(),
@@ -70,10 +67,7 @@ public class CategoryService {
         return toDTO(cat);
     }
 
-    /**
-     * Obtiene una lista de IDs que incluye al padre y a todos sus descendientes (recursivo).
-     * Útil para filtrar productos por categoría raíz.
-     */
+   
     @Transactional(readOnly = true)
     public List<Long> getAllChildIds(Long parentId) {
         Category parent = categoryRepository.findById(parentId)

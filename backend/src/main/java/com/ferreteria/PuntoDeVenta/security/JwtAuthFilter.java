@@ -16,17 +16,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * Se ejecuta en CADA petición: si trae un token JWT válido en el header
- * "Authorization: Bearer xxx", autentica al usuario para esa petición.
- *
- * IMPORTANTE — sobre la referencia circular:
- * SecurityConfig necesita este filtro, y este filtro necesita servicios que
- * (indirectamente) define SecurityConfig -> ciclo. Para romperlo, este filtro
- * NO recibe sus dependencias por el constructor; las pide al ApplicationContext
- * de forma diferida (solo cuando ya hay un token que validar). Asi Spring puede
- * crear el filtro sin necesitar los otros beans todavia.
- */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
@@ -51,7 +40,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         final String token = authHeader.substring(7);
         try {
-            // Beans obtenidos de forma diferida (rompe el ciclo de creacion)
             JwtService jwtService = contexto.getBean(JwtService.class);
             UserDetailsService userDetailsService =
                     contexto.getBean(UserDetailsService.class);
@@ -70,7 +58,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            // Token invalido/expirado: no autentica, la peticion sigue sin sesion
             logger.debug("Token JWT invalido: " + e.getMessage());
         }
 

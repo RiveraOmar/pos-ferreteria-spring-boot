@@ -10,11 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
-/**
- * Configuración de la Factura Global — fila única (id=1). Se lee en cada
- * timbrado/consulta, así que un cambio del dueño en el front aplica de
- * inmediato, sin reiniciar el servidor.
- */
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -24,7 +20,6 @@ public class ConfiguracionFacturacionService {
 
     private final ConfiguracionFacturacionRepository repository;
 
-    /** Si no existe la fila (instalación nueva), la crea con MENSUAL por default. */
     @Transactional
     public ConfiguracionFacturacion obtener() {
         return repository.findById(ID_UNICO).orElseGet(() -> {

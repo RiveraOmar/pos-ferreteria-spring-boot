@@ -25,7 +25,6 @@ public class ReportService {
 
         List<Sale> todasLasVentas = saleRepository.findByCreatedAtBetween(start, end);
 
-        // Solo ventas activas (COMPLETED o DEUDA) para los totales
         List<Sale> ventasActivas = todasLasVentas.stream()
                 .filter(s -> s.getStatus() != null
                         && !s.getStatus().equals("CANCELLED"))

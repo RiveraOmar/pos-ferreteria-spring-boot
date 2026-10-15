@@ -28,7 +28,6 @@ public class PrefacturaService {
     private final ProductRepository    productRepository;
     private final InventoryRepository  inventoryRepository;
 
-    // ─── Crear ───────────────────────────────────────────────────────────────
     @Transactional
     public PrefacturaDTO crear(PrefacturaRequestDTO req) {
         Customer customer = customerRepository.findById(req.customerId())
@@ -47,13 +46,11 @@ public class PrefacturaService {
         agregarItems(p, req.items());
         calcularTotales(p);
 
-        // Descontar stock al crear (igual que una venta)
         descontarStock(p.getItems());
 
         return toDTO(prefacturaRepository.save(p));
     }
 
-    // ─── Actualizar ───────────────────────────────────────────────────────────
     @Transactional
     public PrefacturaDTO actualizar(Long id, PrefacturaRequestDTO req) {
         Prefactura p = prefacturaRepository.findById(id)
@@ -63,10 +60,8 @@ public class PrefacturaService {
             throw new RuntimeException("No se puede editar una prefactura " + p.getStatus());
         }
 
-        // Devolver stock de los items actuales antes de reemplazarlos
         devolverStock(p.getItems());
 
-        // Validar stock con los nuevos items
         validarStock(req.items());
 
         p.getItems().clear();
@@ -75,13 +70,11 @@ public class PrefacturaService {
         calcularTotales(p);
         p.setUpdatedAt(LocalDateTime.now());
 
-        // Descontar stock con los nuevos items
         descontarStock(p.getItems());
 
         return toDTO(prefacturaRepository.save(p));
     }
 
-    // ─── Cambiar estado ───────────────────────────────────────────────────────
     @Transactional
     public PrefacturaDTO cambiarEstado(Long id, String nuevoStatus) {
         Prefactura p = prefacturaRepository.findById(id)
@@ -94,7 +87,6 @@ public class PrefacturaService {
             throw new RuntimeException("No se puede cancelar una prefactura ya emitida. Genera una nota de crédito.");
         }
 
-        // Si se cancela → devolver stock al inventario
         if (nuevoStatus.equals("CANCELADA")) {
             devolverStock(p.getItems());
         }
@@ -104,28 +96,24 @@ public class PrefacturaService {
         return toDTO(prefacturaRepository.save(p));
     }
 
-    // ─── Listar activas ───────────────────────────────────────────────────────
     @Transactional(readOnly = true)
     public List<PrefacturaDTO> listarActivas() {
         return prefacturaRepository.findAllActivas().stream()
                 .map(this::toDTO).collect(Collectors.toList());
     }
 
-    // ─── Listar por cliente ───────────────────────────────────────────────────
     @Transactional(readOnly = true)
     public List<PrefacturaDTO> listarPorCliente(Long customerId) {
         return prefacturaRepository.findByCustomerIdOrderByCreatedAtDesc(customerId)
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    // ─── Obtener uno ─────────────────────────────────────────────────────────
     @Transactional(readOnly = true)
     public PrefacturaDTO obtener(Long id) {
         return toDTO(prefacturaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Prefactura no encontrada")));
     }
 
-    // ─── STOCK: Validar ───────────────────────────────────────────────────────
     private void validarStock(List<PrefacturaRequestDTO.ItemRequest> items) {
         if (items == null) return;
         for (var ir : items) {
@@ -142,7 +130,6 @@ public class PrefacturaService {
         }
     }
 
-    // ─── STOCK: Descontar al crear o actualizar ───────────────────────────────
     private void descontarStock(List<PrefacturaItem> items) {
         for (PrefacturaItem item : items) {
             if (item.getProduct() == null) continue;
@@ -154,7 +141,6 @@ public class PrefacturaService {
         }
     }
 
-    // ─── STOCK: Devolver al cancelar o al editar ──────────────────────────────
     private void devolverStock(List<PrefacturaItem> items) {
         for (PrefacturaItem item : items) {
             if (item.getProduct() == null) continue;
@@ -166,7 +152,6 @@ public class PrefacturaService {
         }
     }
 
-    // ─── Agregar items ────────────────────────────────────────────────────────
     private void agregarItems(Prefactura p, List<PrefacturaRequestDTO.ItemRequest> itemsReq) {
         if (itemsReq == null) return;
         for (var ir : itemsReq) {
@@ -184,8 +169,6 @@ public class PrefacturaService {
         }
     }
 
-    // ─── Calcular totales ─────────────────────────────────────────────────────
-    // Precios YA INCLUYEN IVA → extraer: sinIva = total / 1.16
     private void calcularTotales(Prefactura p) {
         BigDecimal totalConIva = p.getItems().stream()
                 .map(PrefacturaItem::getSubtotal)
@@ -197,7 +180,6 @@ public class PrefacturaService {
         p.setTotal(totalConIva);
     }
 
-    // ─── Convertir a DTO ─────────────────────────────────────────────────────
     private PrefacturaDTO toDTO(Prefactura p) {
         List<PrefacturaDTO.PrefacturaItemDTO> items = p.getItems().stream()
                 .map(i -> new PrefacturaDTO.PrefacturaItemDTO(

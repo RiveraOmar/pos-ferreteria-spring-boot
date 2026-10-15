@@ -27,7 +27,6 @@ public class PurchaseOrderService {
     private final SupplierProductRepository   supplierProductRepository;
     private final PriceHistoryRepository      priceHistoryRepository;
 
-    // ─── Registrar compra: SUBE el stock, ACTUALIZA el costo del producto ─────
     @Transactional
     public PurchaseOrderDTO registrar(PurchaseOrderRequestDTO req) {
         Supplier supplier = supplierRepository.findById(req.supplierId())
@@ -62,7 +61,6 @@ public class PurchaseOrderService {
             item.setSubtotal(itemSubtotal);
             po.getItems().add(item);
 
-            // ── 1. SUBIR STOCK ───────────────────────────────────────────────
             Inventory inv = inventoryRepository.findByProductIdWithLock(product.getId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Sin registro de inventario para: " + product.getName()));
@@ -70,11 +68,6 @@ public class PurchaseOrderService {
             inv.setLastRestock(LocalDateTime.now());
             inventoryRepository.save(inv);
 
-            // ── 2. VALIDAR: el costo nuevo nunca puede superar el precio de venta ──
-            // Se compara contra el precio que el producto VA A TENER después de esta
-            // compra: si mandaste newListPrice, contra ese; si no, contra el que ya
-            // tenía guardado. Así evitamos que un producto quede vendiéndose a pérdida
-            // de forma silenciosa cuando solo se sube el costo sin tocar el precio.
             BigDecimal precioVentaResultante = itemReq.newListPrice() != null
                     ? itemReq.newListPrice()
                     : product.getListPrice();
@@ -88,7 +81,6 @@ public class PurchaseOrderService {
                                 + "de venta para este producto.");
             }
 
-            // ── 3. ACTUALIZAR COSTO (siempre) Y PRECIO DE VENTA (si se indicó) ──
             if (product.getCostPrice() == null ||
                     product.getCostPrice().compareTo(itemReq.unitCost()) != 0) {
                 PriceHistory h = new PriceHistory();
@@ -100,17 +92,11 @@ public class PurchaseOrderService {
             }
             product.setCostPrice(itemReq.unitCost());
 
-            // El precio de venta es opcional: si el dueño lo capturó en la compra,
-            // se actualiza junto con el costo. Si no, el precio de venta no se toca.
             if (itemReq.newListPrice() != null) {
                 product.setListPrice(itemReq.newListPrice());
-                // Antes aquí también se subía minPrice al nuevo precio. Se
-                // quitó: era una de las formas de dejar el producto invendible
-                // más adelante, cuando el precio bajara por otro lado.
-            }
+                }
             productRepository.save(product);
 
-            // ── 3. GUARDAR RELACIÓN PROVEEDOR-PRODUCTO (para comparar precios) ─
             SupplierProduct sp = supplierProductRepository
                     .findBySupplierIdAndProductId(supplier.getId(), product.getId())
                     .orElseGet(() -> {
@@ -124,7 +110,6 @@ public class PurchaseOrderService {
             supplierProductRepository.save(sp);
         }
 
-        // El costo no lleva IVA desglosado en este sistema (se maneja como compra directa)
         po.setSubtotal(subtotal);
         po.setTaxAmount(BigDecimal.ZERO);
         po.setTotal(subtotal);
@@ -141,12 +126,10 @@ public class PurchaseOrderService {
             throw new RuntimeException("Esta orden ya está cancelada.");
         }
 
-        // Revertir el stock que se había sumado
         for (PurchaseOrderItem item : po.getItems()) {
             inventoryRepository.findByProductId(item.getProduct().getId())
                     .ifPresent(inv -> {
                         BigDecimal nuevoStock = inv.getStockActual().subtract(item.getQuantity());
-                        // No permitir stock negativo al cancelar — si ya se vendió, se queda en 0
                         inv.setStockActual(nuevoStock.max(BigDecimal.ZERO));
                         inventoryRepository.save(inv);
                     });

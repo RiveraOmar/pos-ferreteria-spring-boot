@@ -15,21 +15,13 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Genera y valida tokens JWT. El token lleva el usuario y sus roles firmados
- * con una clave secreta del servidor: nadie puede falsificarlo sin la clave.
- * El token EXPIRA (por defecto 12 h), así que una sesión robada no vive para
- * siempre.
- */
 @Service
 public class JwtService {
 
-    // Clave secreta para firmar. DEBE venir de config (ferrepos.properties) y
-    // ser larga y aleatoria en producción. Nunca subir a Git.
+   
     @Value("${app.jwt.secret}")
     private String secret;
 
-    // Duración del token en milisegundos (por defecto 12 horas)
     @Value("${app.jwt.expiration-ms:43200000}")
     private long expirationMs;
 
@@ -37,7 +29,6 @@ public class JwtService {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
-    /** Genera un token para un usuario autenticado, con sus roles dentro. */
     public String generarToken(UserDetails user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", user.getAuthorities().stream()
@@ -72,7 +63,6 @@ public class JwtService {
                 .getBody();
     }
 
-    /** Un token es válido si es del usuario correcto y no ha expirado. */
     public boolean esValido(String token, UserDetails user) {
         final String usuario = extraerUsuario(token);
         return usuario.equals(user.getUsername()) && !expirado(token);

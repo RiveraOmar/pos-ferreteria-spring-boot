@@ -19,17 +19,12 @@ public class GeminiService {
     private static final String BASE_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent";
 
-    // Sin timeout, esta llamada podía quedarse esperando PARA SIEMPRE si
-    // Google tarda o no hay internet — ocupando un hilo del servidor sin
-    // soltarlo nunca. Con varias personas usando la Búsqueda IA a la vez,
-    // así es como el backend completo se sentía "caído" sin ningún error
-    // visible: no era un crash, era un cuelgue silencioso acumulándose.
     private final RestTemplate restTemplate = crearRestTemplateConTimeout();
 
     private static RestTemplate crearRestTemplateConTimeout() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(8_000);   // 8s máximo para conectar
-        factory.setReadTimeout(20_000);     // 20s máximo esperando respuesta
+        factory.setConnectTimeout(8_000);  
+        factory.setReadTimeout(20_000);     
         return new RestTemplate(factory);
     }
 
@@ -64,7 +59,6 @@ public class GeminiService {
 
         String url = BASE_URL + "?key=" + apiKey;
 
-        // Reintenta hasta 3 veces ante error 503 (modelo saturado temporalmente)
         int intentos    = 0;
         int maxIntentos = 3;
 
@@ -86,7 +80,6 @@ public class GeminiService {
                 return (String) firstPart.get("text");
 
             } catch (org.springframework.web.client.HttpServerErrorException e) {
-                // 503 = modelo saturado temporalmente — vale la pena reintentar
                 System.out.println("GEMINI 503 (intento " + (intentos + 1) + "): "
                         + e.getResponseBodyAsString());
                 intentos++;
@@ -95,7 +88,6 @@ public class GeminiService {
                             "Intenta de nuevo en un momento.";
                 }
                 try {
-                    // Espera creciente: 1.5s, 3s entre reintentos
                     Thread.sleep(1500L * intentos);
                 } catch (InterruptedException ignored) {
                     Thread.currentThread().interrupt();
@@ -111,8 +103,6 @@ public class GeminiService {
                 return "No se pudo consultar la compatibilidad. Revisa la conexión o la API key.";
 
             } catch (ResourceAccessException e) {
-                // Timeout o sin internet: ya NO se cuelga, regresa aquí en
-                // segundos con un mensaje claro en vez de tumbar el hilo.
                 System.out.println("GEMINI sin respuesta a tiempo: " + e.getMessage());
                 return "No se pudo contactar al asistente de IA (sin internet o " +
                         "tardó demasiado). El resto del sistema sigue funcionando " +

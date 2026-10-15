@@ -33,8 +33,6 @@ public class InventoryService {
     private final InventoryAdjustmentRepository adjustmentRepository;
     private final ProductRepository productRepository;
 
-    // Tope de seguridad: nadie necesita cargar 10 millones de piezas y un
-    // dedo de más en el teclado no debería reventar el inventario entero.
     private static final BigDecimal MAX_STOCK_MASIVO = new BigDecimal("100000");
 
     @Transactional(readOnly = true)
@@ -81,12 +79,6 @@ public class InventoryService {
 
         Product product = inventory.getProduct();
 
-        // ── VALIDACIÓN: el precio de venta no debe quedar por debajo del costo ──
-        // Se comparan los valores FINALES (el nuevo, o el vigente si no se envió).
-        // Esta validación vive AQUÍ y no en el frontend porque el costo del
-        // producto no se expone al vendedor (ver ProductFullDetailsDTO).
-        // Si es una venta con pérdida intencional, el frontend reenvía con
-        // allowLoss=true tras confirmarlo el usuario.
         java.math.BigDecimal costoFinal  = request.newCostPrice() != null
                 ? request.newCostPrice() : product.getCostPrice();
         java.math.BigDecimal precioFinal = request.newListPrice() != null
@@ -95,7 +87,6 @@ public class InventoryService {
         boolean permitido = Boolean.TRUE.equals(request.allowLoss());
         if (!permitido && costoFinal != null && precioFinal != null
                 && precioFinal.compareTo(costoFinal) < 0) {
-            // Mensaje SIN montos del costo, para no filtrar el margen
             throw new IllegalArgumentException(
                     "PRECIO_BAJO_COSTO: El precio de venta quedaría por debajo "
                             + "del costo del producto (se vendería con pérdida).");
@@ -104,10 +95,6 @@ public class InventoryService {
         if (request.newCostPrice() != null) product.setCostPrice(request.newCostPrice());
         if (request.newListPrice() != null) {
             product.setListPrice(request.newListPrice());
-            // El piso de min_price ya no se valida al vender, pero la columna
-            // sigue ahí. Se baja junto con el precio para que los datos nunca
-            // queden incoherentes: si alguien reactiva la validación algún día,
-            // no se encuentra medio catálogo trabado de golpe.
             if (product.getMinPrice() != null
                     && product.getMinPrice().compareTo(request.newListPrice()) > 0) {
                 product.setMinPrice(request.newListPrice());
@@ -117,19 +104,6 @@ public class InventoryService {
         inventoryRepository.save(inventory);
     }
 
-    // ── CARGA MASIVA DE EXISTENCIAS A TODO EL CATÁLOGO ──────────────────────
-    // Deja TODOS los productos con la misma cantidad (ej. 100 piezas), y da
-    // de alta el renglón de inventario a los que ni siquiera lo tenían — sin
-    // ese renglón el producto ni se puede vender (deductStock truena).
-    //
-    // Cada cambio queda en la bitácora de ajustes igual que un ajuste manual:
-    // cuánto había, cuánto quedó, por qué y quién lo hizo. Poder mover el
-    // stock de todo el catálogo sin dejar rastro sería justo la forma
-    // perfecta de tapar un faltante.
-    //
-    // OJO: en modo soloEnCero=false esto PISA el conteo real de los productos
-    // que sí tenían existencias. Después de facturar, haz un conteo físico y
-    // ajusta, o el inventario dejará de reflejar el anaquel.
     @Transactional
     public Map<String, Object> establecerStockMasivo(StockMasivoDTO request) {
 
@@ -166,7 +140,6 @@ public class InventoryService {
             Optional<Inventory> opt = inventoryRepository.findByProductId(p.getId());
 
             if (opt.isEmpty()) {
-                // Producto del catálogo que nunca tuvo renglón de inventario
                 Inventory nuevo = new Inventory();
                 nuevo.setProduct(p);
                 nuevo.setStockActual(cantidad);
@@ -184,7 +157,6 @@ public class InventoryService {
             BigDecimal antes = inv.getStockActual() != null
                     ? inv.getStockActual() : BigDecimal.ZERO;
 
-            // Modo seguro: no pisar lo que ya tiene piezas contadas
             if (soloEnCero && antes.compareTo(BigDecimal.ZERO) > 0) {
                 respetados++;
                 continue;
@@ -205,10 +177,10 @@ public class InventoryService {
         r.put("cantidad",       cantidad);
         r.put("soloEnCero",     soloEnCero);
         r.put("productos",      productos.size());
-        r.put("creados",        creados);        // sin renglón de inventario antes
+        r.put("creados",        creados);       
         r.put("actualizados",   actualizados);
-        r.put("sinCambio",      sinCambio);      // ya tenían justo esa cantidad
-        r.put("respetados",     respetados);     // tenían stock y no se tocaron
+        r.put("sinCambio",      sinCambio);     
+        r.put("respetados",     respetados);    
         r.put("mensaje", (creados + actualizados) + " producto(s) quedaron con "
                 + cantidad.stripTrailingZeros().toPlainString() + " piezas.");
         log.info("[STOCK-MASIVO] {} productos revisados — {} creados, {} "
@@ -232,14 +204,6 @@ public class InventoryService {
         return a;
     }
 
-    // ── AJUSTE MANUAL DE INVENTARIO ─────────────────────────────────────────
-    // Para cuando el sistema dice 10 y en el anaquel hay 7. Sirve para bajar
-    // Y para subir: se manda la cantidad REAL contada y aquí se calcula la
-    // diferencia.
-    //
-    // Cada ajuste deja registro de cuánto había, cuánto quedó, por qué y
-    // quién lo hizo. Eso es lo importante de este método: sin la bitácora,
-    // poder bajar el stock a mano sería la forma perfecta de tapar un robo.
     @Transactional
     public InventoryAdjustment adjustStock(Long productId, InventoryAdjustmentDTO request) {
 
@@ -254,9 +218,6 @@ public class InventoryService {
             throw new IllegalArgumentException(
                     "Indica el motivo del ajuste (conteo, merma, error de captura...).");
 
-        // Con lock: si en ese instante entra una venta del mismo producto, una
-        // de las dos operaciones esperaría. Sin esto, el ajuste podría pisar
-        // el descuento de la venta y el stock quedaría mal.
         Inventory inventory = inventoryRepository.findByProductIdWithLock(productId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "El producto no tiene registro de inventario."));
@@ -288,10 +249,7 @@ public class InventoryService {
         return adjustmentRepository.findByProductIdOrderByFechaDesc(productId);
     }
 
-    /** Quién está haciendo el ajuste. Si por alguna razón no hay sesión,
-     *  se guarda "desconocido" en vez de dejar el campo vacío: un ajuste sin
-     *  responsable sigue siendo mejor dato que ningún registro. */
-    private String usuarioActual() {
+   private String usuarioActual() {
         try {
             var auth = SecurityContextHolder.getContext().getAuthentication();
             return (auth != null && auth.getName() != null) ? auth.getName() : "desconocido";

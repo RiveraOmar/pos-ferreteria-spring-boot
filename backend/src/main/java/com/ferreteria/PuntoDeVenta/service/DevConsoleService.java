@@ -10,18 +10,7 @@ import java.sql.ResultSetMetaData;
 import java.time.LocalDateTime;
 import java.util.*;
 
-/**
- * ═══════════════════════════════════════════════════════════════════════════
- *  CONSOLA DE DESARROLLO — ejecución directa de SQL (equivalente a pgAdmin)
- *
- *  SELECT           → regresa filas + columnas para pintar una tabla.
- *  INSERT/UPDATE/... → ejecuta y regresa cuántas filas se afectaron.
- *
- *  Cada ejecución se guarda en dev_console_log (se crea sola la primera
- *  vez que se usa) para poder ver después qué se ejecutó y cuándo — la
- *  única red de seguridad que tiene esta consola de control total.
- * ═══════════════════════════════════════════════════════════════════════════
- */
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -31,7 +20,6 @@ public class DevConsoleService {
 
     private boolean tablaLogLista = false;
 
-    /** Crea la tabla de bitácora la primera vez que se usa la consola. */
     private void asegurarTablaLog() {
         if (tablaLogLista) return;
         jdbcTemplate.execute("""
@@ -101,14 +89,12 @@ public class DevConsoleService {
         }
     }
 
-    /** Guarda la ejecución en su propia transacción para que quede aunque falle el SQL. */
     private void registrarLog(String sql, String resultado, String error) {
         try {
             jdbcTemplate.update(
                     "INSERT INTO dev_console_log (sql_texto, resultado, error) VALUES (?, ?, ?)",
                     sql, resultado, error);
         } catch (Exception ignored) {
-            // Si falla el registro del log, no debe tumbar la consulta original.
         }
     }
 
@@ -119,7 +105,6 @@ public class DevConsoleService {
                         "FROM dev_console_log ORDER BY ejecutado_en DESC LIMIT 100");
     }
 
-    /** Lista de tablas y columnas del esquema público, para explorar la BD. */
     public List<Map<String, Object>> esquema() {
         return jdbcTemplate.queryForList("""
             SELECT table_name, column_name, data_type
@@ -134,7 +119,6 @@ public class DevConsoleService {
         return limpio.length() > 120 ? limpio.substring(0, 120) + "..." : limpio;
     }
 
-    /** Traduce los errores más comunes de Postgres a algo entendible. */
     private String mensajeAmigable(Exception e) {
         String msg = e.getMessage() != null ? e.getMessage() : "Error desconocido";
         if (msg.contains("does not exist") && msg.contains("relation"))

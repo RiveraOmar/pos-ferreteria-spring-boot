@@ -47,16 +47,11 @@ public class ProductService {
     private final PriceHistoryRepository priceHistoryRepository;
     private final SupplierProductRepository supplierProductRepository;
     private final SupplierRepository supplierRepository;
-    // Solo para los candados del borrado permanente
     private final ProductImageRepository productImageRepository;
     private final SaleItemRepository saleItemRepository;
     private final PrefacturaItemRepository prefacturaItemRepository;
     private final PurchaseOrderItemRepository purchaseOrderItemRepository;
 
-    // Mismo mapa que usa el frontend (productos.js/ventas.js) para decidir
-    // si el producto se vende por fracciones (kg, m, L...) o solo piezas enteras.
-    // Se mantiene aquí también para que el backend pueda informar unitLabel y
-    // allowDecimal en la ficha sin que el frontend tenga que recalcularlo.
     private static final Set<String> UNIDADES_DECIMALES = new HashSet<>(List.of(
             "MTR", "KGM", "GRM", "LTR", "MLT", "CMT", "MTK", "DMT",
             "DMQ", "HLT", "TNE", "MGM", "H87P"
@@ -89,16 +84,6 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    /**
-     * Catálogo completo.
-     *
-     * OJO con el nombre: este método se llamaba getAllActive() pero hacía
-     * findAll() — devolvía activos E inactivos. Por eso los productos
-     * desactivados seguían saliendo en el buscador de Ventas.
-     *
-     * Ahora sí filtra. El módulo de Productos, que SÍ necesita ver los
-     * inactivos para poder activarlos, pide incluirInactivos = true.
-     */
     public List<ProductResponseDTO> getAllActive() {
         return getAll(false);
     }
@@ -108,12 +93,7 @@ public class ProductService {
                 ? productRepository.findAll()
                 : productRepository.findByActiveTrue();
 
-        // ── FIX N+1 ──────────────────────────────────────────────────────────
-        // Antes convertToDTO pedía el stock producto por producto: con 11
-        // productos eran 11 consultas (invisible), pero con un catálogo de
-        // 15,000 son 15,000 consultas en una sola petición y el endpoint se
-        // ahoga. Aquí se trae TODO el inventario de un golpe y se reparte.
-        List<Inventory> invs = inventoryRepository.findAll();
+       List<Inventory> invs = inventoryRepository.findAll();
         Map<Long, BigDecimal> stocks = invs.stream()
                 .filter(i -> i.getProduct() != null)
                 .collect(Collectors.toMap(
@@ -135,24 +115,6 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    /**
-     * Búsqueda "como la de las tiendas": no hace falta escribir el nombre exacto.
-     *
-     * Cómo funciona:
-     *  1. Si lo escrito es un código de barras, se devuelve ese producto y ya.
-     *  2. Se parte la frase en palabras. Se consulta a la base con la palabra
-     *     más larga (la más específica: reduce miles de filas a decenas), y las
-     *     demás palabras se filtran sobre ese resultado. Así "perico 15" o
-     *     "15 perico" encuentran "Llave ajustable (perico) 15\" cromada",
-     *     aunque las palabras no estén juntas ni en ese orden.
-     *  3. Se ignoran acentos y palabras de relleno ("de", "para", "con"...).
-     *  4. Se ordena por relevancia: primero lo que empieza con lo buscado,
-     *     luego lo que lo contiene en el nombre, al final las coincidencias
-     *     que solo están en la descripción.
-     *
-     * Se resuelve aquí y no en SQL porque el número de palabras es variable;
-     * armar eso en JPQL exigiría consultas dinámicas para poca ganancia.
-     */
     public List<ProductResponseDTO> searchProducts(String term) {
         return searchProducts(term, false);
     }
@@ -169,30 +131,21 @@ public class ProductService {
         String limpio = normalizar(term);
         if (limpio.isBlank()) return List.of();
 
-        // ── 1. ¿Es un código tal cual? Se busca exacto antes que nada ──
         String posibleCodigo = term.trim();
 
-        // 1a. Código de barras (el lector manda el código completo, 8+ dígitos)
         if (posibleCodigo.length() >= 8 && posibleCodigo.chars().allMatch(Character::isDigit)) {
             List<Product> porBarras = productRepository.findByBarcode(posibleCodigo);
             if (!porBarras.isEmpty()) return convertirConStock(porBarras, incluirInactivos);
         }
 
-        // 1b. Código interno de Truper (el del catálogo impreso, ej. 100048).
-        //     Va antes de la búsqueda por texto: si escribes el código exacto,
-        //     quieres ESE producto, no todo lo que contenga esos dígitos.
         if (posibleCodigo.matches("\\d{4,10}")) {
             List<Product> porTruper = productRepository.findByCodigoTruper(posibleCodigo);
             if (!porTruper.isEmpty()) return convertirConStock(porTruper, incluirInactivos);
         }
 
-        // 1c. SKU exacto (ej. PET-15X): también gana sobre la búsqueda difusa
         List<Product> porSku = productRepository.findBySkuIgnoreCase(posibleCodigo);
         if (!porSku.isEmpty()) return convertirConStock(porSku, incluirInactivos);
 
-        // ── 2. Palabras (se tiran las de relleno y las de 1 letra) ──
-        // Se asigna UNA sola vez: si se reasignara, Java no dejaría usarla
-        // dentro de los lambdas de abajo ("effectively final").
         List<String> encontradas = Arrays.stream(limpio.split("\\s+"))
                 .filter(w -> w.length() > 1 && !RELLENO.contains(w))
                 .distinct()
@@ -202,8 +155,6 @@ public class ProductService {
                 ? List.of(limpio.trim())
                 : encontradas;
 
-        // La palabra más larga es la más específica: con ella se pregunta a la
-        // base (una sola consulta), y el resto se filtra sobre ese resultado.
         String ancla = palabras.stream()
                 .max(Comparator.comparingInt(String::length))
                 .orElse(limpio);
@@ -211,10 +162,9 @@ public class ProductService {
         List<Product> candidatos = productRepository.searchByTerm(ancla);
 
         List<Product> filtrados = candidatos.stream()
-                .filter(p -> p.getId() > 0)  // excluir producto genérico de venta libre (id -1)
+                .filter(p -> p.getId() > 0)  
                 .filter(p -> {
-                    // Se incluyen los atributos: ahí viven el código de
-                    // Truper, la marca y la familia.
+                    
                     String texto = normalizar(
                             (p.getName() == null ? "" : p.getName()) + " " +
                                     (p.getSku()  == null ? "" : p.getSku())  + " " +
@@ -225,13 +175,12 @@ public class ProductService {
                 })
                 .sorted(Comparator.comparingInt((Product p) -> relevancia(p, palabras))
                         .thenComparing(p -> p.getName() == null ? "" : p.getName()))
-                .limit(200)   // el mostrador no revisa más de 200 resultados
+                .limit(200)   
                 .collect(Collectors.toList());
 
         return convertirConStock(filtrados, incluirInactivos);
     }
 
-    /** Vuelve texto los atributos (marca, familia, codigo_truper...) para buscar. */
     private String textoAtributos(Product p) {
         if (p.getAttributes() == null || p.getAttributes().isEmpty()) return "";
         StringBuilder sb = new StringBuilder();
@@ -242,73 +191,48 @@ public class ProductService {
         return sb.toString();
     }
 
-    /** Palabras que no aportan al buscar y solo estorban. */
     private static final Set<String> RELLENO = Set.of(
             "de", "del", "la", "el", "los", "las", "para", "con", "por",
             "un", "una", "y", "en", "al", "a");
 
-    /** Quita acentos y pasa a minúsculas: "Válvula" y "valvula" son lo mismo. */
     private String normalizar(String s) {
         if (s == null) return "";
-        // 1. Quitar acentos (é→e, ó→o, ñ→n, etc.)
         String n = Normalizer.normalize(s, Normalizer.Form.NFD)
                 .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
-        // 2. Normalizar caracteres especiales que el teclado en español o el
-        //    lector de código de barras puede mandar distintos a como están
-        //    guardados en la base de datos:
-        //
-        //      × (U+00D7) signo de multiplicación  →  x
-        //      ÷ (U+00F7) signo de división        →  /
-        //      ′ (U+2032) prima (pulgada)           →  '
-        //      ″ (U+2033) prima doble (pie)         →  "
-        //      – (U+2013) guión medio               →  -
-        //      — (U+2014) guión largo               →  -
-        //      " " (U+201C/D) comillas tipográficas →  "
-        //      ' ' (U+2018/9) comillas tipográficas →  '
-        //
-        //    Sin esto, buscar "1/2×1/4" (con ×) no encontraba "1/2x1/4"
-        //    (con x) aunque el nombre fuera idéntico visualmente.
-        n = n.replace("\u00D7", "x")   // × → x
-                .replace("\u00F7", "/")   // ÷ → /
-                .replace("\u2032", "'")   // ′ → '
-                .replace("\u2033", "\"") // ″ → "
-                .replace("\u2013", "-")   // – → -
-                .replace("\u2014", "-")   // — → -
-                .replace("\u201C", "\"") // " → "
-                .replace("\u201D", "\"") // " → "
-                .replace("\u2018", "'")   // ' → '
-                .replace("\u2019", "'");  // ' → '
+        
+        n = n.replace("\u00D7", "x")   
+                .replace("\u00F7", "/")  
+                .replace("\u2032", "'")  
+                .replace("\u2033", "\"") 
+                .replace("\u2013", "-")   
+                .replace("\u2014", "-")  
+                .replace("\u201C", "\"") 
+                .replace("\u201D", "\"") 
+                .replace("\u2018", "'")  
+                .replace("\u2019", "'");  
         return n.toLowerCase().trim();
     }
 
-    /** Menor número = sale primero. */
     private int relevancia(Product p, List<String> palabras) {
         String nombre = normalizar(p.getName());
         String sku    = normalizar(p.getSku());
         String frase  = String.join(" ", palabras);
 
-        if (sku.equals(frase))            return 0;  // SKU exacto
-        if (nombre.equals(frase))         return 1;  // nombre exacto
-        if (nombre.startsWith(frase))     return 2;  // empieza con lo buscado
+        if (sku.equals(frase))            return 0;  
+        if (nombre.equals(frase))         return 1;  
+        if (nombre.startsWith(frase))     return 2;  
         if (sku.startsWith(frase))        return 3;
-        if (nombre.contains(frase))       return 4;  // frase completa en el nombre
-        if (palabras.stream().allMatch(nombre::contains)) return 5; // todas en el nombre
-        return 6;                                    // solo en descripción/otros
+        if (nombre.contains(frase))       return 4;  
+        if (palabras.stream().allMatch(nombre::contains)) return 5; 
+        return 6;                                    
     }
 
-    /** Convierte a DTO trayendo el inventario en UNA consulta (evita el N+1). */
-    /** Versión de siempre: solo productos activos. */
+    
     private List<ProductResponseDTO> convertirConStock(List<Product> productos) {
         return convertirConStock(productos, false);
     }
 
-    /** convertirConStock es el embudo por donde pasan TODAS las ramas de la
-     *  búsqueda (código de barras, Truper, SKU y texto). Filtrar aquí evita
-     *  repetir el mismo if cuatro veces y olvidarlo en la quinta.
-     *
-     *  La bandera va como PARÁMETRO y no como campo del servicio: el servicio
-     *  es un singleton compartido por todas las peticiones, así que un campo
-     *  se pisaría entre dos búsquedas simultáneas. */
+    
     private List<ProductResponseDTO> convertirConStock(List<Product> productos,
                                                        boolean incluirInactivos) {
         if (!incluirInactivos) {
@@ -339,19 +263,16 @@ public class ProductService {
         return convertToDTO(product);
     }
 
-    /** Versión de siempre: consulta el stock ella sola (para 1 producto). */
     public ProductResponseDTO convertToDTO(Product p) {
         BigDecimal stock = inventoryService.getStockStatus(p.getId())
                 .map(Inventory::getStockActual).orElse(BigDecimal.ZERO);
         return convertToDTO(p, stock);
     }
 
-    /** Versión para listas: recibe el stock ya traído, sin consultar de nuevo. */
     public ProductResponseDTO convertToDTO(Product p, BigDecimal stock) {
         return convertToDTO(p, stock, null);
     }
 
-    /** Versión que además recibe la ubicación física ya traída. */
     public ProductResponseDTO convertToDTO(Product p, BigDecimal stock, String rack) {
 
         ProductResponseDTO.CategorySlimDTO catDTO = null;
@@ -376,7 +297,6 @@ public class ProductService {
                 p.isActive(),
                 p.getMinStockLevel(),
                 p.getBarcode(),
-                // SAT
                 p.getSatClaveProdServ(),
                 p.getSatClaveUnidad(),
                 p.getSatObjetoImp(),
@@ -390,12 +310,6 @@ public class ProductService {
 
     @Transactional
 
-    /**
-     * Coherencia de precios de un producto. Sin esto, un precio mínimo mayor
-     * al precio de lista deja el producto INVENDIBLE (toda venta fallaría en
-     * la validación "precio >= mínimo"), y un precio de lista menor al costo
-     * significa vender perdiendo dinero sin darse cuenta.
-     */
     private void validarPrecios(Product p) {
         if (p.getSku() == null || p.getSku().isBlank())
             throw new IllegalArgumentException("El SKU es obligatorio.");
@@ -405,9 +319,6 @@ public class ProductService {
                 || p.getListPrice().compareTo(java.math.BigDecimal.ZERO) <= 0)
             throw new IllegalArgumentException(
                     "El precio de venta debe ser mayor a cero.");
-        // Las validaciones de min_price se retiraron junto con el piso de
-        // precio de SaleService. La columna sigue existiendo en la base para
-        // no romper nada, pero ya no manda sobre nada.
         if (p.getCostPrice() != null
                 && p.getCostPrice().compareTo(java.math.BigDecimal.ZERO) < 0)
             throw new IllegalArgumentException(
@@ -421,14 +332,6 @@ public class ProductService {
     }
 
 
-    // ═════════════════════════════════════════════════════════════════════
-    //  CATEGORÍA POR DEFECTO — "Sin Categoría"
-    //  Si el producto se crea sin categoría (aún no existe la correcta),
-    //  se asigna automáticamente a "Sin Categoría" (se crea sola la
-    //  primera vez). Después, al editar el producto, se mueve a la buena.
-    //  Así la categoría nunca frena un alta y ningún producto queda
-    //  huérfano de clasificación.
-    // ═════════════════════════════════════════════════════════════════════
     private Category obtenerCategoriaDefault() {
         return categoryRepository.findFirstByNameIgnoreCase("Sin Categoría")
                 .orElseGet(() -> {
@@ -449,7 +352,6 @@ public class ProductService {
             categoryRepository.findById(product.getCategory().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Categoría inexistente"));
         } else {
-            // Sin categoría elegida → "Sin Categoría" por defecto
             product.setCategory(obtenerCategoriaDefault());
         }
         if (product.getTaxRate() == null) {
@@ -471,7 +373,6 @@ public class ProductService {
         Product existing = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado: " + id));
 
-        // Historial de precios
         if (details.getListPrice() != null &&
                 (existing.getListPrice() == null ||
                         existing.getListPrice().compareTo(details.getListPrice()) != 0)) {
@@ -485,10 +386,6 @@ public class ProductService {
 
         existing.setName(details.getName());
         existing.setSku(details.getSku());
-        // El codigo de barras SI se guarda. Antes esta linea no existia: el
-        // formulario lo mostraba precargado y dejaba editarlo, pero al guardar
-        // el cambio se perdia en silencio y el producto se quedaba con el
-        // codigo viejo. Escaneabas y no lo encontraba.
         existing.setBarcode(details.getBarcode());
         existing.setDescription(details.getDescription());
         existing.setListPrice(details.getListPrice());
@@ -499,12 +396,11 @@ public class ProductService {
         existing.setCategory(
                 details.getCategory() != null && details.getCategory().getId() != null
                         ? details.getCategory()
-                        : obtenerCategoriaDefault());   // nunca queda sin clasificar
+                        : obtenerCategoriaDefault());   
         existing.setTaxRate(details.getTaxRate() != null
                 ? details.getTaxRate() : BigDecimal.valueOf(0.16));
         existing.setActive(details.isActive());
 
-        // SAT
         existing.setSatClaveProdServ(details.getSatClaveProdServ());
         existing.setSatClaveUnidad(details.getSatClaveUnidad());
         existing.setSatObjetoImp(details.getSatObjetoImp());
@@ -525,8 +421,6 @@ public class ProductService {
     public void deleteProduct(Long id) {
         Product p = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No encontrado"));
-        // Evita "eliminar" dos veces el mismo producto con un mensaje claro
-        // en vez de un "éxito" silencioso que no avisa nada.
         if (!p.isActive()) {
             throw new IllegalStateException(
                     "Este producto ya estaba eliminado (inactivo).");
@@ -543,18 +437,11 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
-    // ─── FICHA COMPLETA DE SOLO LECTURA ────────────────────────────────────────
-    // Junta producto + historial de precio + proveedores en una sola respuesta
-    // para el botón "Ver detalles" en Productos y en Ventas.
-    // No expone el costo en texto plano en ningún punto, mismo criterio que
-    // convertToDTO() ya aplica con PriceEncoder.
     @Transactional(readOnly = true)
     public ProductFullDetailsDTO getFullDetails(Long id) {
         Product p = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
 
-        // Se necesita el Inventory completo (no solo el stock) para leer
-        // locationRack — la ubicación física que ya capturas al hacer restock.
         var inventoryOpt = inventoryService.getStockStatus(p.getId());
         BigDecimal stock = inventoryOpt.map(Inventory::getStockActual).orElse(BigDecimal.ZERO);
         String ubicacion = inventoryOpt.map(Inventory::getLocationRack).orElse(null);
@@ -565,8 +452,6 @@ public class ProductService {
                     p.getCategory().getId(), p.getCategory().getName());
         }
 
-        // Historial: solo fecha, nunca el monto. Comparamos oldPrice/newPrice
-        // únicamente para decidir si fue un aumento o una baja, no lo exponemos.
         List<ProductFullDetailsDTO.PriceChangeDTO> historial =
                 priceHistoryRepository.findByProductIdOrderByChangeDateDesc(id).stream()
                         .map(h -> {
@@ -585,7 +470,6 @@ public class ProductService {
                         })
                         .collect(Collectors.toList());
 
-        // Proveedores que surten este producto, sin exponer el último costo pagado
         List<ProductFullDetailsDTO.SupplierForProductDTO> proveedores =
                 supplierProductRepository.findByProductIdOrderByLastCostAsc(id).stream()
                         .map((SupplierProduct sp) -> new ProductFullDetailsDTO.SupplierForProductDTO(
@@ -617,13 +501,7 @@ public class ProductService {
         );
     }
 
-    // ═════════════════════════════════════════════════════════════════════
-    //  PROVEEDORES DE UN PRODUCTO — pre-asignación desde el alta/edición
-    //  (la relación también se crea sola al registrar compras; esto permite
-    //  declararla ANTES de la primera compra, p.ej. "estos baleros me los
-    //  surte Refaccionaria X")
-    // ═════════════════════════════════════════════════════════════════════
-
+    
     @Transactional(readOnly = true)
     public List<java.util.Map<String, Object>> proveedoresDeProducto(Long productId) {
         return supplierProductRepository
@@ -639,14 +517,6 @@ public class ProductService {
                 }).toList();
     }
 
-    /**
-     * Sincroniza los proveedores asignados a un producto.
-     * - Agrega los vínculos nuevos (sin costo aún: se llenará con la
-     *   primera compra registrada).
-     * - Quita los desmarcados SOLO si no tienen historial de compras
-     *   (lastCost nulo). Un vínculo con compras registradas se conserva
-     *   siempre: es historial de costos, no una preferencia editable.
-     */
     @Transactional
     public List<java.util.Map<String, Object>> asignarProveedores(
             Long productId, List<Long> supplierIds) {
@@ -659,7 +529,6 @@ public class ProductService {
         List<SupplierProduct> actuales = supplierProductRepository
                 .findByProductIdOrderByLastCostAsc(productId);
 
-        // Quitar desmarcados sin historial
         for (SupplierProduct sp : actuales) {
             boolean sigue = deseados.contains(sp.getSupplier().getId());
             if (!sigue && sp.getLastCost() == null) {
@@ -667,7 +536,6 @@ public class ProductService {
             }
         }
 
-        // Agregar los nuevos
         java.util.Set<Long> yaLigados = actuales.stream()
                 .map(sp -> sp.getSupplier().getId())
                 .collect(java.util.stream.Collectors.toSet());
@@ -686,9 +554,6 @@ public class ProductService {
 
 
 
-    /** Código del producto en el catálogo del FABRICANTE (Truper, etc.),
-     *  guardado en los atributos del producto. Es distinto del supplier_sku
-     *  (código del distribuidor). Se prueban varias claves comunes. */
     private String codigoFabricante(Product p) {
         if (p.getAttributes() == null) return null;
         for (String clave : List.of("codigo_truper", "codigo_fabricante",
@@ -699,11 +564,6 @@ public class ProductService {
         return null;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
-    //  SUGERENCIA DE COMPRA — stock bajo agrupado por proveedor asignado
-    //  Cantidad sugerida: llegar al DOBLE del mínimo (mín para no volver a
-    //  caer de inmediato + colchón). Editable en pantalla antes de pedir.
-    // ═════════════════════════════════════════════════════════════════════
     @Transactional(readOnly = true)
     public List<java.util.Map<String, Object>> sugerenciaCompra() {
         List<Product> faltantes = productRepository.findAll().stream()
@@ -720,7 +580,6 @@ public class ProductService {
                 })
                 .toList();
 
-        // proveedor → lista de productos sugeridos
         java.util.Map<String, java.util.Map<String, Object>> grupos =
                 new java.util.LinkedHashMap<>();
 
@@ -731,7 +590,6 @@ public class ProductService {
                     .orElse(java.math.BigDecimal.ZERO);
             java.math.BigDecimal min = p.getMinStockLevel() != null
                     ? p.getMinStockLevel() : java.math.BigDecimal.ZERO;
-            // sugerido = doble del mínimo − stock actual (al menos 1)
             java.math.BigDecimal sugerido = min.multiply(java.math.BigDecimal.TWO)
                     .subtract(stock).max(java.math.BigDecimal.ONE);
 
@@ -767,8 +625,6 @@ public class ProductService {
             if (links.isEmpty()) {
                 agregar.accept("__SIN__", null);
             } else {
-                // El proveedor con MEJOR último costo encabeza; si el producto
-                // tiene varios, aparece con cada uno (tú decides a quién pedir)
                 for (SupplierProduct sp : links) {
                     agregar.accept("S" + sp.getSupplier().getId(), sp);
                 }
@@ -778,14 +634,6 @@ public class ProductService {
     }
 
 
-    // ═════════════════════════════════════════════════════════════════════
-    //  CATÁLOGO DE UN PROVEEDOR con recomendación de compra
-    //  Parte del PROVEEDOR: muestra TODOS los productos que él te surte, con
-    //  su urgencia. Útil cuando vas a hacer UN pedido a UN proveedor y
-    //  quieres aprovechar el envío incluyendo lo que ya va cerca del mínimo.
-    //  urgencia: 'agotado' (stock 0) · 'bajo' (≤ mínimo) ·
-    //            'proximo' (≤ 1.5× mínimo) · 'ok'
-    // ═════════════════════════════════════════════════════════════════════
     @Transactional(readOnly = true)
     public java.util.Map<String, Object> catalogoProveedorParaCompra(Long supplierId) {
         Supplier prov = supplierRepository.findById(supplierId)
@@ -808,7 +656,6 @@ public class ProductService {
             java.math.BigDecimal min = p.getMinStockLevel() != null
                     ? p.getMinStockLevel() : java.math.BigDecimal.ZERO;
 
-            // urgencia
             String urgencia;
             if (stock.signum() == 0)                              urgencia = "agotado";
             else if (stock.compareTo(min) <= 0)                   urgencia = "bajo";
@@ -817,7 +664,6 @@ public class ProductService {
                 urgencia = "proximo";
             else                                                  urgencia = "ok";
 
-            // sugerido solo si conviene pedir (no 'ok'); doble del mínimo − stock
             java.math.BigDecimal sugerido = urgencia.equals("ok")
                     ? java.math.BigDecimal.ZERO
                     : min.multiply(java.math.BigDecimal.TWO).subtract(stock)
@@ -837,7 +683,6 @@ public class ProductService {
             productos.add(m);
         }
 
-        // orden: primero lo más urgente (agotado > bajo > proximo > ok)
         java.util.Map<String, Integer> rank = java.util.Map.of(
                 "agotado", 0, "bajo", 1, "proximo", 2, "ok", 3);
         productos.sort((a, b) -> Integer.compare(
@@ -852,13 +697,6 @@ public class ProductService {
     }
 
 
-    // ── BORRADO PERMANENTE ──────────────────────────────────────────────────
-    // Esto SI borra el renglon. No hay deshacer.
-    //
-    // Los tres candados de abajo no son burocracia: si el producto ya aparece
-    // en una venta, su renglon esta amarrado a sale_items, y esas ventas son
-    // registros fiscales que hay obligacion de conservar cinco anios. Borrar
-    // el producto rompe esas ventas.
     @Transactional
     public void borrarPermanente(Long id) {
 
@@ -866,24 +704,16 @@ public class ProductService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "El producto no existe o ya fue borrado."));
 
-        // Candado 1: tiene que estar desactivado. Obliga a pasar por
-        // "dado de baja" antes de borrar, y da tiempo a que alguien note
-        // que ese producto si se ocupaba.
         if (p.isActive())
             throw new IllegalArgumentException(
                     "Primero desactiva el producto. Solo se borran los que ya "
                             + "estan dados de baja.");
 
-        // Candado 2: nunca se vendio. Este es el importante.
         long enVentas = saleItemRepository.countByProductId(id);
         if (enVentas > 0)
-            // Mensaje CORTO a proposito: api.js del frontend reemplaza por uno
-            // generico cualquier texto de mas de 120 caracteres, y el usuario
-            // se quedaba sin saber por que no se borraba.
             throw new IllegalArgumentException(
                     "Ya se vendio " + enVentas + " vez(ces). Solo se puede desactivar.");
 
-        // Candado 3: tampoco en documentos ya emitidos
         if (prefacturaItemRepository.countByProductId(id) > 0)
             throw new IllegalArgumentException(
                     "No se puede borrar: aparece en pre-facturas.");
@@ -891,8 +721,6 @@ public class ProductService {
             throw new IllegalArgumentException(
                     "No se puede borrar: aparece en ordenes de compra.");
 
-        // Lo que SI es desechable: cuelga del producto y no tiene valor
-        // fiscal. Se borra ANTES, o Postgres rechaza por las llaves foraneas.
         productImageRepository.deleteByProductId(id);
         priceHistoryRepository.deleteByProductId(id);
         supplierProductRepository.deleteByProductId(id);
@@ -901,10 +729,6 @@ public class ProductService {
         productRepository.delete(p);
     }
 
-    // ── ACTIVAR / DESACTIVAR VARIOS DE UN JALON ─────────────────────────────
-    // Para trabajar el catalogo dormido: se importan miles de productos del
-    // libro de Truper inactivos, y se van activando los que de verdad se
-    // manejan. Uno por uno seria imposible con 15,000 renglones.
     @Transactional
     public int cambiarEstadoMasivo(List<Long> ids, boolean activo) {
         if (ids == null || ids.isEmpty()) return 0;

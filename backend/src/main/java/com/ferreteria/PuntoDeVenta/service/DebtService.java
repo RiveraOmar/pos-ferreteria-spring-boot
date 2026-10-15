@@ -81,10 +81,6 @@ public class DebtService {
         debt.setUpdatedAt(LocalDateTime.now());
         debt.setStatus(newRemaining.compareTo(BigDecimal.ZERO) <= 0 ? "PAID" : "PARTIAL");
 
-        // NOTA: la nota original de la deuda ("quién llevó el producto") NO se
-        // toca al pagar. La nota del pago se guarda en su propio historial abajo.
-
-        // Guardar registro en historial de pagos
         DebtPayment pago = new DebtPayment();
         pago.setDebt(debt);
         pago.setAmount(request.amount());
@@ -124,11 +120,6 @@ public class DebtService {
 
 
 
-    /**
-     * Agrega productos a una nota de fiado existente: suma los items a su
-     * venta (con stock e IVA) y aumenta el total y el saldo de la deuda.
-     * La nota de "quién llevó" se ANEXA a la existente, nunca se reemplaza.
-     */
     @Transactional
     public DebtResponseDTO agregarItems(Long debtId, AgregarItemsDebtDTO request) {
         Debt debt = debtRepository.findById(debtId)
@@ -159,11 +150,6 @@ public class DebtService {
     }
 
 
-    // ═════════════════════════════════════════════════════════════════════
-    //  LIBRETA DE FIADO — cargos (productos) y abonos de un cliente, todos
-    //  juntos en una sola línea de tiempo, más nuevo arriba. Así no hay que
-    //  entrar a cada venta para ver qué se llevó: aquí ya está desglosado.
-    // ═════════════════════════════════════════════════════════════════════
     @Transactional(readOnly = true)
     public List<LibretaEntryDTO> getLibretaCliente(Long customerId) {
         List<Debt> deudas = debtRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
@@ -172,7 +158,6 @@ public class DebtService {
         for (Debt d : deudas) {
             String folio = d.getSale() != null ? d.getSale().getInvoiceNumber() : null;
 
-            // Un renglón por CADA PRODUCTO de la venta de esta nota de fiado
             if (d.getSale() != null && d.getSale().getItems() != null) {
                 for (SaleItem item : d.getSale().getItems()) {
                     String nombre = (item.getCustomName() != null && !item.getCustomName().isBlank())
@@ -193,8 +178,6 @@ public class DebtService {
                     ));
                 }
             } else {
-                // Nota de fiado sin venta ligada (se creó a mano): un solo
-                // renglón con el total, para que no desaparezca de la libreta.
                 entradas.add(new LibretaEntryDTO(
                         "CARGO", d.getCreatedAt(),
                         d.getNotes() != null && !d.getNotes().isBlank() ? d.getNotes() : "Nota de fiado",
@@ -202,7 +185,6 @@ public class DebtService {
                 ));
             }
 
-            // Los abonos de ESTA nota, como renglones propios
             List<DebtPayment> pagos = debtPaymentRepository.findByDebtIdOrderByPaymentDateDesc(d.getId());
             for (DebtPayment p : pagos) {
                 entradas.add(new LibretaEntryDTO(
@@ -213,9 +195,7 @@ public class DebtService {
             }
         }
 
-        // Más nuevo arriba (si empatan fecha exacta, cargo antes que abono
-        // se ve más natural: "llevó y luego pagó" no al revés)
-        entradas.sort(Comparator.comparing(LibretaEntryDTO::fecha).reversed());
+       entradas.sort(Comparator.comparing(LibretaEntryDTO::fecha).reversed());
         return entradas;
     }
 

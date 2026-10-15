@@ -44,8 +44,6 @@ public class PdfCfdiService {
     private final CfdiTimbradoRepository cfdiRepo;
     private final EmpresaRepository empresaRepo;
 
-    // Colores — casi todo negro como el PDF de FEL.
-    // El azul SOLO se usa en los links del pie de página.
     private static final DeviceRgb NEGRO      = new DeviceRgb(0,   0,   0);
     private static final DeviceRgb AZUL_FEL   = new DeviceRgb(0,   102, 204); // links pie
     private static final DeviceRgb GRIS_TABLA = new DeviceRgb(210, 210, 210);
@@ -66,7 +64,6 @@ public class PdfCfdiService {
     }
 
     private byte[] generarPdf(CfdiTimbrado cfdi) throws Exception {
-        // ── Leer datos de la empresa emisora desde BD ───────────────
         Empresa empresa = empresaRepo.findAll().stream().findFirst().orElse(null);
         String emDirCompleta = "";
         String emTel = "";
@@ -88,7 +85,6 @@ public class PdfCfdiService {
                 emTel = "Tel. " + empresa.getTelefono();
         }
 
-        // ── Leer domicilio del cliente desde la relación sale→customer ──
         String recDirCompleta = "";
         try {
             if (cfdi.getSale()!=null && cfdi.getSale().getCustomer()!=null) {
@@ -105,7 +101,6 @@ public class PdfCfdiService {
             }
         } catch (Exception ignored) {}
 
-        // ── Parsear XML ─────────────────────────────────────────────
         String xmlRaw = cfdi.getXmlTimbrado();
         if (xmlRaw.contains("&lt;"))
             xmlRaw = xmlRaw.replace("&lt;","<").replace("&gt;",">")
@@ -133,7 +128,6 @@ public class PdfCfdiService {
         if (cNL.getLength()==0) cNL = xml.getElementsByTagName("cfdi:Concepto");
         if (cNL.getLength()==0) cNL = xml.getElementsByTagName("Concepto");
 
-        // Datos
         String folio  = aF(comp,"Folio",           xmlRaw,"Folio");
         String serie  = aF(comp,"Serie",            xmlRaw,"Serie");
         String fecha  = aF(comp,"Fecha",            xmlRaw,"Fecha").replace("T"," ");
@@ -173,14 +167,11 @@ public class PdfCfdiService {
         try { iva=new BigDecimal(totS.replace(",","")).subtract(new BigDecimal(subS.replace(",",""))); }
         catch(Exception ig){}
 
-        // ── Conceptos COMPACTOS: una sola línea por producto ────────
-        // [cantidad, unidad, claveProdServ, descripción, precioUnit, importe]
         List<String[]> concs = new ArrayList<>();
         String tasaGlobal = "0.160000";
         for (int i=0;i<cNL.getLength();i++) {
             Element c = (Element)cNL.item(i);
 
-            // Solo tomamos la tasa para mostrarla en los totales
             NodeList trs = c.getElementsByTagNameNS("*","Traslado");
             if (trs.getLength()==0) trs=c.getElementsByTagName("cfdi:Traslado");
             for (int t=0;t<trs.getLength();t++) {
@@ -205,18 +196,12 @@ public class PdfCfdiService {
         String enLetra  = numeroALetras(totS);
         String folioNum = (serie.isBlank()?"":serie+" ")+folio;
 
-        // ── PDF ────────────────────────────────────────────────────
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PdfDocument pdfDoc = new PdfDocument(new PdfWriter(baos));
         Document doc = new Document(pdfDoc, PageSize.LETTER);
         doc.setMargins(20, 20, 20, 20);
 
-        // ════════════════════════════════════════════════════════════
-        // CABECERA — 3 zonas: [logo izq] [emisor+cliente centro] [CFDI der]
-        // Todo en NEGRO como el PDF original de FEL
-        // ════════════════════════════════════════════════════════════
-
-        // Contenido Emisor
+        
         Table tEmis = new Table(UnitValue.createPercentArray(new float[]{100}))
                 .setWidth(UnitValue.createPercentValue(100));
         Cell cEmis = new Cell().setBorder(Border.NO_BORDER)
@@ -232,7 +217,6 @@ public class PdfCfdiService {
             cEmis.add(p(emTel,6.5f,false).setTextAlignment(TextAlignment.CENTER));
         tEmis.addCell(cEmis);
 
-        // Contenido Cliente
         Table tCli = new Table(UnitValue.createPercentArray(new float[]{100}))
                 .setWidth(UnitValue.createPercentValue(100));
         Cell cCli = new Cell().setBorder(Border.NO_BORDER)
@@ -249,24 +233,17 @@ public class PdfCfdiService {
         if (!recDirCompleta.isBlank())
             cCli.add(p(recDirCompleta,6.5f,false).setTextAlignment(TextAlignment.CENTER));
         tCli.addCell(cCli);
-
-        // Tabla principal: [logo rowspan=2] [emisor / cliente] [cfdi rowspan=2]
-        // Columnas laterales SIMÉTRICAS (32.5 / 35 / 32.5) para que el bloque
-        // central de emisor/cliente quede centrado respecto a la hoja.
-        Table hdr = new Table(UnitValue.createPercentArray(new float[]{32.5f,35,32.5f}))
+ Table hdr = new Table(UnitValue.createPercentArray(new float[]{32.5f,35,32.5f}))
                 .setWidth(UnitValue.createPercentValue(100));
 
-        // Col 1 — Logo (espacio reservado, sin borde)
         hdr.addCell(new Cell(2,1)
                 .setBorder(Border.NO_BORDER)
                 .setPadding(8)
                 .setVerticalAlignment(VerticalAlignment.MIDDLE)
                 .add(p("",8,false)));
 
-        // Col 2 fila 1 — Emisor
         hdr.addCell(new Cell().setBorder(Border.NO_BORDER).setPadding(0).add(tEmis));
 
-        // Col 3 — Datos CFDI (labels bold, valores normales — todo negro)
         Cell hDer = new Cell(2,1).setBorder(Border.NO_BORDER).setPadding(4)
                 .setVerticalAlignment(VerticalAlignment.TOP);
         hDer.add(p("Factura "+folioNum,13,true).setTextAlignment(TextAlignment.RIGHT).setMarginBottom(3));
@@ -286,16 +263,11 @@ public class PdfCfdiService {
         hDer.add(pVal(lugar));
         hdr.addCell(hDer);
 
-        // Col 2 fila 2 — Cliente
         hdr.addCell(new Cell().setBorder(Border.NO_BORDER).setPadding(0).add(tCli));
 
         doc.add(hdr.setMarginBottom(6));
 
-        // ════════════════════════════════════════════════════════════
-        // TABLA DE CONCEPTOS — COMPACTA (1 línea por producto)
-        // El detalle de impuestos NO se repite por concepto;
-        // el IVA se muestra en los totales (estilo Magno Centro)
-        // ════════════════════════════════════════════════════════════
+        
         Table tituloConc = new Table(UnitValue.createPercentArray(new float[]{100}))
                 .setWidth(UnitValue.createPercentValue(100));
         tituloConc.addCell(new Cell()
@@ -303,7 +275,6 @@ public class PdfCfdiService {
                 .add(p("CONCEPTOS",8,true).setFontColor(BLANCO).setTextAlignment(TextAlignment.CENTER)));
         doc.add(tituloConc.setMarginBottom(0));
 
-        // Columnas: # | Cant | Unidad | Clave SAT | Descripción | P.Unit | Importe
         float[] colPcts = {5, 7, 9, 11, 44, 12, 12};
         Table cTbl = new Table(UnitValue.createPercentArray(colPcts))
                 .setWidth(UnitValue.createPercentValue(100));
@@ -316,16 +287,15 @@ public class PdfCfdiService {
                     .setPaddingTop(2).setPaddingBottom(2).setPaddingLeft(3).setPaddingRight(3)
                     .add(p(h,7f,true).setFontColor(BLANCO).setTextAlignment(TextAlignment.CENTER)));
 
-        // Filas compactas: padding mínimo, fuente 7, fondo alterno gris muy claro
         SolidBorder bCelda = new SolidBorder(GRIS_TABLA, 0.4f);
         TextAlignment[] al = {
-                TextAlignment.CENTER,  // #
-                TextAlignment.RIGHT,   // Cant
-                TextAlignment.CENTER,  // Unidad
-                TextAlignment.CENTER,  // Clave SAT
-                TextAlignment.LEFT,    // Descripción
-                TextAlignment.RIGHT,   // P.Unit
-                TextAlignment.RIGHT    // Importe
+                TextAlignment.CENTER,  
+                TextAlignment.RIGHT,   
+                TextAlignment.CENTER,  
+                TextAlignment.CENTER,  
+                TextAlignment.LEFT,    
+                TextAlignment.RIGHT,   
+                TextAlignment.RIGHT    
         };
         boolean alt = false;
         int partida = 1;
@@ -352,15 +322,11 @@ public class PdfCfdiService {
                     .add(p("Sin conceptos en XML.",8,false).setFontColor(NEGRO)));
         doc.add(cTbl.setMarginBottom(8));
 
-        // ════════════════════════════════════════════════════════════
-        // PIE — Datos izquierda | Totales derecha
-        // ════════════════════════════════════════════════════════════
-        Table pie = new Table(UnitValue.createPercentArray(new float[]{60,40}))
+       Table pie = new Table(UnitValue.createPercentArray(new float[]{60,40}))
                 .setWidth(UnitValue.createPercentValue(100)).setMarginBottom(8);
 
         Cell piIzq = new Cell().setBorder(Border.NO_BORDER).setPadding(0).setPaddingRight(8);
 
-        // "IMPORTE CON LETRA   [valor]" en la misma fila
         Table letraRow = new Table(UnitValue.createPercentArray(new float[]{32,68}))
                 .setWidth(UnitValue.createPercentValue(100));
         letraRow.addCell(new Cell().setBorder(Border.NO_BORDER).setPadding(1)
@@ -369,7 +335,6 @@ public class PdfCfdiService {
                 .add(p(enLetra,6.5f,false).setFontColor(NEGRO)));
         piIzq.add(letraRow.setMarginBottom(3));
 
-        // Datos en 2 columnas — label bold | valor
         Table datosIzq = new Table(UnitValue.createPercentArray(new float[]{38,62}))
                 .setWidth(UnitValue.createPercentValue(100));
         String[][] datos = {
@@ -391,7 +356,6 @@ public class PdfCfdiService {
         piIzq.add(datosIzq);
         pie.addCell(piIzq);
 
-        // Derecha — SUBTOTAL / TRASLADO IVA / TOTAL
         Cell piDer = new Cell().setBorder(Border.NO_BORDER).setPadding(0)
                 .setVerticalAlignment(VerticalAlignment.TOP);
         Table tots = new Table(UnitValue.createPercentArray(new float[]{58,42}))
@@ -416,9 +380,6 @@ public class PdfCfdiService {
         pie.addCell(piDer);
         doc.add(pie.setMarginBottom(8));
 
-        // ════════════════════════════════════════════════════════════
-        // SELLOS + QR — labels bold, sellos en micro (todo negro)
-        // ════════════════════════════════════════════════════════════
         Table qrSel = new Table(UnitValue.createPercentArray(new float[]{18,82}))
                 .setWidth(UnitValue.createPercentValue(100));
 
@@ -450,9 +411,6 @@ public class PdfCfdiService {
         qrSel.addCell(cSel);
         doc.add(qrSel.setMarginBottom(6));
 
-        // ════════════════════════════════════════════════════════════
-        // PIE FINAL — links en azul (único azul del documento)
-        // ════════════════════════════════════════════════════════════
         Table pieFinal = new Table(UnitValue.createPercentArray(new float[]{50,50}))
                 .setWidth(UnitValue.createPercentValue(100));
         Cell pfIzq = new Cell().setBorder(Border.NO_BORDER).setPadding(2);
@@ -480,9 +438,6 @@ public class PdfCfdiService {
                         .setFontColor(NEGRO).setTextAlignment(TextAlignment.CENTER)));
         doc.add(lineaFinal);
 
-        // ── Numeración REAL de páginas (Página X de Y) ──────────────
-        // Se estampa al final, cuando ya se conoce el total de páginas.
-        // Así funciona bien cuando los conceptos brincan a 2+ hojas.
         int totalPags = pdfDoc.getNumberOfPages();
         for (int pg = 1; pg <= totalPags; pg++) {
             doc.showTextAligned(
@@ -496,9 +451,7 @@ public class PdfCfdiService {
         return baos.toByteArray();
     }
 
-    // ── Párrafos helper ───────────────────────────────────────────────────
 
-    /** Texto negro. */
     private Paragraph p(String txt, float size, boolean bold) {
         Paragraph par = new Paragraph(txt!=null?txt:"")
                 .setFontSize(size).setFontColor(NEGRO).setMarginBottom(1).setMultipliedLeading(1.2f);
@@ -506,7 +459,6 @@ public class PdfCfdiService {
         return par;
     }
 
-    /** Valor de la columna derecha del header (negro, alineado derecha). */
     private Paragraph pVal(String txt) {
         return new Paragraph(txt!=null?txt:"")
                 .setFontSize(7).setFontColor(NEGRO)
@@ -514,14 +466,6 @@ public class PdfCfdiService {
                 .setMarginBottom(2).setMultipliedLeading(1.1f);
     }
 
-    /**
-     * Párrafo para sellos y cadena original: cadenas base64 larguísimas
-     * SIN espacios. iText por defecto solo corta línea en espacios/guiones,
-     * por lo que estas cadenas se salían del margen derecho de la hoja.
-     * BreakAllSplitCharacters le permite a iText cortar en CUALQUIER
-     * carácter, envolviendo el texto en varias líneas dentro de la celda
-     * — igual que en el PDF original de FEL.
-     */
     private Paragraph pSello(String txt) {
         Paragraph par = new Paragraph(txt != null ? txt : "")
                 .setFontSize(5).setFontColor(NEGRO)
@@ -530,7 +474,6 @@ public class PdfCfdiService {
         return par;
     }
 
-    /** Label negro bold, alineado a la derecha (columna derecha del header). */
     private Paragraph pLabel(String txt) {
         return new Paragraph(txt!=null?txt:"")
                 .setFontSize(7.5f).setBold().setFontColor(NEGRO)
@@ -538,7 +481,6 @@ public class PdfCfdiService {
                 .setMarginBottom(0).setMultipliedLeading(1.1f);
     }
 
-    // ── Helpers XML ───────────────────────────────────────────────────────
 
     private Element fe(org.w3c.dom.Document xml, String name) {
         NodeList nl=xml.getElementsByTagNameNS("*",name);
@@ -574,16 +516,13 @@ public class PdfCfdiService {
         catch(Exception e){return s;}
     }
 
-    /** Cantidad siempre con 2 decimales (1.00, 0.35, 3.00). */
     private String fmtCant(String s) {
         if(s==null||s.isBlank()) return "0.00";
         try{return String.format("%.2f",new BigDecimal(s.replace(",","")));}
         catch(Exception e){return s;}
     }
 
-    // ── Catálogos ─────────────────────────────────────────────────────────
 
-    /** Nombre de la unidad a partir de la ClaveUnidad SAT (o atributo Unidad si viene en XML). */
     private String nombreUnidad(String clave, String unidadAttr) {
         if(unidadAttr!=null && !unidadAttr.isBlank()) return unidadAttr;
         if(clave==null) return "Pz";
@@ -643,7 +582,6 @@ public class PdfCfdiService {
             case "S01"->"Sin efectos fiscales"; case "CP01"->"Pagos"; default->c;};
     }
 
-    // ── Número a letras ───────────────────────────────────────────────────
 
     private String numeroALetras(String monto) {
         try{
@@ -652,7 +590,6 @@ public class PdfCfdiService {
             long cts=bd.subtract(BigDecimal.valueOf(ent))
                     .multiply(BigDecimal.valueOf(100)).setScale(0,RoundingMode.HALF_UP).longValue();
             String l = letras(ent).toUpperCase();
-            // Gramática: "UN MILLÓN DE PESOS", pero "UN MILLÓN CIEN MIL PESOS"
             String de = (l.endsWith("MILLÓN")||l.endsWith("MILLONES")) ? " DE" : "";
             return l+de+" PESOS, "+String.format("%02d",cts)+"/100 MXN";
         }catch(Exception e){return monto+" MXN";}
