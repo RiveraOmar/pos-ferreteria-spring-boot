@@ -1,10 +1,10 @@
 
-# ─── 1. BASE DE DATOS ─────────────────────────────────────────────────────────
+#1. BASE DE DATOS 
 spring.datasource.url=jdbc:postgresql://localhost:5432/ferreteria
 spring.datasource.username=postgres
 spring.datasource.password=CAMBIA_ESTA_PASSWORD
 
-# ─── 2. USUARIOS DEL SISTEMA ──────────────────────────────────────────────────
+#2. USUARIOS DEL SISTEMA
 # El dueño (ADMIN): acceso total — reportes, facturación, cancelaciones, compras
 app.security.admin.username=dueno
 app.security.admin.password=CAMBIA_ESTA_PASSWORD
@@ -12,39 +12,39 @@ app.security.admin.password=CAMBIA_ESTA_PASSWORD
 app.security.seller.username=empleado1
 app.security.seller.password=CAMBIA_ESTA_PASSWORD
 
-# ─── 3. INTELIGENCIA ARTIFICIAL (Gemini) ──────────────────────────────────────
+#  3. INTELIGENCIA ARTIFICIAL (Gemini) 
 # Genera tu key en https://aistudio.google.com/apikey y pégala aquí.
 gemini.api.key=PEGA_AQUI_TU_API_KEY
 
-# ─── 4. FACTURACIÓN CFDI (FEL Premium / Blikon) ───────────────────────────────
+#  4. FACTURACIÓN CFDI (FEL Premium / Blikon) 
 # "pruebas" usa app.fel.mx/CR33Test  |  "produccion" usa www.fel.mx/CR33
 fel.ambiente=pruebas
 # Las credenciales FEL (usuario, cuenta, password, PIN) y los datos fiscales
 # del emisor viven en la tabla `empresa` de la BD.
 # Ver database/Tables/empresa.sql para darlos de alta en una instalación nueva.
 
-# ─── 5. RED ───────────────────────────────────────────────────────────────────
+#  5. RED 
 server.port=9090
 # Orígenes permitidos para el frontend (separados por coma, sin espacios)
 app.cors.allowed-origins=http://127.0.0.1:5500,http://localhost:5500
 
-# ─── 6. IMÁGENES DE PRODUCTO ───────────────────────────────────────────────────
+#  6. IMÁGENES DE PRODUCTO 
 # Carpeta donde se guardan las fotos subidas (se crea sola). Respáldala con la BD.
 app.uploads.dir=uploads
 
-# ─── 7. SUBIDA DE ARCHIVOS (fotos de producto) ────────────────────────────────
+#  7. SUBIDA DE ARCHIVOS (fotos de producto) 
 # Por defecto Spring limita a 1 MB, pero las fotos de celular pesan 2-5 MB.
 # Se sube el límite a 10 MB (el UploadController valida 6 MB por su cuenta).
 spring.servlet.multipart.max-file-size=12MB
 spring.servlet.multipart.max-request-size=12MB
 
-# ─── 8. SEGURIDAD JWT (login con token) ───────────────────────────────────────
+#  8. SEGURIDAD JWT (login con token) 
 app.jwt.secret=GENERA_UNA_CLAVE_ALEATORIA_LARGA_AQUI
 app.jwt.expiration-ms=43200000
 
 app.uploads.max-width=1600
 app.uploads.jpeg-quality=0.88
 
-# ─── 9. FACTURA GLOBAL (Público en General) ───────────────────────────────────
+#  9. FACTURA GLOBAL (Público en General) 
 facturaglobal.auto.enabled=true
 facturaglobal.auto.cron=0 30 9 * * *

@@ -5,7 +5,7 @@ import java.math.RoundingMode;
 import java.util.Random;
 
 public class PriceEncoder {
-    private static final String KEY = "MEXICANOS"; // M=1, E=2, X=3... S=9, 0=Random
+    private static final String KEY = "MEXICANOS"; 
     private static final String ALPHABET = "ABFGHIJKLNPQRTUVWYZ";
     private static final Random RANDOM = new Random();
 
