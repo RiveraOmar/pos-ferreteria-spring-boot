@@ -1,17 +1,3 @@
-/* ═══════════════════════════════════════════════════════════════════════
-   FerrePOS — MENÚ LATERAL DE TRES POSICIONES
-   Un solo botón cambia entre:
-
-     · FIJO    — el menú de siempre, 248px, ocupando su lugar.
-     · RIEL    — 64px con puros iconos; se abre al pasar el mouse.
-     · OCULTO  — fuera de la pantalla; el contenido usa el 100% del ancho.
-                 Se saca con la pestaña del borde izquierdo, con Ctrl+B,
-                 o simplemente no se saca: para eso están las teclas F.
-
-   Se carga DESPUÉS de style.css y theme-az.css. No cambia ninguna clase
-   ni ID existente, así que los módulos siguen funcionando igual.
-   Todo vive en @media (min-width:861px): en celular nada se modifica.
-   ═══════════════════════════════════════════════════════════════════════ */
 
 @media (min-width: 861px) {
 
@@ -21,9 +7,7 @@
     --vel: .18s cubic-bezier(.4, 0, .2, 1);
 }
 
-/* ── Base: el menú sale del flujo y se fija a la izquierda ──────────────
-   Al abrirse FLOTA sobre el contenido en vez de empujarlo: la tabla que
-   estás viendo no se recorre ni se vuelve a dibujar. */
+
 .sidebar {
     position: fixed;
     top: 0; left: 0;
@@ -35,20 +19,15 @@
     transition: width var(--vel), transform var(--vel), padding var(--vel);
 }
 
-/* El margen de respaldo es el del menú FIJO a propósito: si algún día el
-   JS fallara o alguien le borrara la clase al <body>, la pantalla se ve
-   como el sistema de siempre, en vez de quedar el contenido escondido
-   debajo del menú. */
+
 #main-content {
     margin-left: var(--w-fijo);
     transition: margin-left var(--vel);
-    padding: 1.15rem 1.35rem !important;   /* antes 1.5rem por lado */
+    padding: 1.15rem 1.35rem !important;   
 }
 
-/* ── MODO FIJO ─────────────────────────────────────────────────────────── */
 body.menu-fijo #main-content { margin-left: var(--w-fijo); }
 
-/* ── MODO RIEL ─────────────────────────────────────────────────────────── */
 body.menu-riel .sidebar {
     width: var(--w-riel);
     padding: .75rem .5rem !important;
@@ -60,7 +39,6 @@ body.menu-riel .sidebar.abierta {
 }
 body.menu-riel #main-content { margin-left: var(--w-riel); }
 
-/* ── MODO OCULTO ───────────────────────────────────────────────────────── */
 body.menu-oculto .sidebar { transform: translateX(-100%); }
 body.menu-oculto .sidebar.abierta {
     transform: translateX(0);
@@ -71,8 +49,6 @@ body.menu-oculto #main-content {
     padding-left: 3.4rem !important;
 }
 
-/* Franja del borde izquierdo: es la senalizacion que ya traia el sidebar,
-   ahora convertida en jaladera. Se ensancha al acercarse el mouse. */
 #zona-menu { display: none; }
 body.menu-oculto #zona-menu {
     display: block;
@@ -88,9 +64,7 @@ body.menu-oculto #zona-menu {
 }
 body.menu-oculto #zona-menu:hover { opacity: 1; width: 12px; }
 
-/* -- BOTON DE HAMBURGUESA --------------------------------------------
-   Un clic abre, otro clic cierra. Cuando el menu esta abierto se corre a
-   un lado y se vuelve una X, para no quedar sepultado debajo del menu. */
+
 #btn-cajon { display: none; }
 body.menu-oculto #btn-cajon {
     display: flex;
@@ -116,7 +90,6 @@ body.menu-oculto #btn-cajon:hover {
 }
 body.menu-oculto #btn-cajon.abierto { left: calc(var(--w-fijo) + 12px); }
 
-/* Velo sobre el contenido mientras el cajón está abierto */
 #overlay-cajon { display: none; }
 body.menu-oculto #overlay-cajon.show {
     display: block;
@@ -126,9 +99,6 @@ body.menu-oculto #overlay-cajon.show {
     background: rgba(10, 13, 18, .34);
 }
 
-/* ═══ ESTADO "SOLO ICONOS" (únicamente en modo riel, sin abrir) ═══════════
-   font-size:0 apaga los textos sueltos sin tener que tocar el HTML de
-   cada módulo; el icono recupera su tamaño con su propia regla. */
 body.menu-riel .sidebar:not(.abierta) .nav-link {
     font-size: 0 !important;
     padding: .52rem 0 !important;
@@ -141,7 +111,6 @@ body.menu-riel .sidebar:not(.abierta) .nav-link i {
     width: 100%;
     text-align: center;
 }
-/* Los encabezados de sección se vuelven rayitas divisorias */
 body.menu-riel .sidebar:not(.abierta) .nav-link.disabled {
     height: 1px; min-height: 1px;
     padding: 0 !important;
@@ -150,7 +119,6 @@ body.menu-riel .sidebar:not(.abierta) .nav-link.disabled {
     border-radius: 0;
     opacity: 1;
 }
-/* Los contadores se vuelven un puntito rojo sobre el icono */
 body.menu-riel .sidebar:not(.abierta) .nav-link .badge { display: none !important; }
 body.menu-riel .sidebar:not(.abierta) #badge-sidebar-faltantes,
 body.menu-riel .sidebar:not(.abierta) #badge-sidebar-deudas {
@@ -164,12 +132,10 @@ body.menu-riel .sidebar:not(.abierta) #badge-sidebar-deudas {
     border-radius: 50%;
     border: 1.5px solid var(--steel-950);
 }
-/* Si tu JS los apaga (cero pendientes), gana el estilo inline */
 body.menu-riel .sidebar:not(.abierta) #badge-sidebar-faltantes[style*="none"],
 body.menu-riel .sidebar:not(.abierta) #badge-sidebar-deudas[style*="none"] {
     display: none !important;
 }
-/* Logo y pie, compactados */
 body.menu-riel .sidebar:not(.abierta) > a.marca {
     justify-content: center;
     margin-bottom: .9rem !important;
@@ -188,10 +154,8 @@ body.menu-riel .sidebar:not(.abierta) .riel-btn i {
     margin: 0 !important;
 }
 
-/* ── Enlaces siempre flex (para centrar iconos y alinear las teclas) ───── */
 .sidebar .nav-link:not(.disabled) { display: flex; align-items: center; }
 
-/* ── Teclas de acceso rápido junto a cada módulo ───────────────────────── */
 .sidebar .tecla {
     margin-left: auto;
     flex-shrink: 0;
@@ -211,7 +175,6 @@ body.menu-riel .sidebar:not(.abierta) .riel-btn i {
 }
 body.menu-riel .sidebar:not(.abierta) .tecla { display: none !important; }
 
-/* ── Botones del pie ───────────────────────────────────────────────────── */
 .riel-btn {
     display: flex;
     align-items: center;
@@ -237,35 +200,19 @@ body.menu-riel .sidebar:not(.abierta) .tecla { display: none !important; }
     color: #fca5a5 !important;
 }
 
-}  /* fin @media escritorio */
+}  
 
-/* ── En celular todo sigue como estaba ─────────────────────────────────── */
 @media (max-width: 860px) {
     #zona-menu, #btn-cajon, #overlay-cajon { display: none !important; }
     #main-content { margin-left: 0 !important; }
     .sidebar .tecla { display: none !important; }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   QUE EL CONTENIDO NO SE SALGA DE LA PANTALLA
-
-   El problema: #main-content es un flex item (.flex-grow-1 dentro del .d-flex).
-   Los flex items traen  min-width: auto  de fabrica, que significa "nunca me
-   encojas por debajo del ancho de mi contenido". Con una tabla de 10 columnas
-   adentro, el main se estiraba hasta caber la tabla y se salia de la ventana:
-   la columna de ACCIONES quedaba cortada y sin barra para llegar a ella.
-
-   Peor aun, eso ANULA el .table-responsive de Bootstrap: ese div solo saca su
-   scroll si su padre lo obliga a apretarse, y aqui nadie lo obligaba.
-
-   min-width: 0 le devuelve el permiso de encogerse. A partir de ahi la tabla
-   se queda dentro de la pantalla y saca su propia barra horizontal.
-   ═══════════════════════════════════════════════════════════════════════════ */
 
 #main-content {
     min-width: 0;
     max-width: 100%;
-    overflow-x: hidden;   /* el scroll horizontal lo pone la tabla, no la pagina */
+    overflow-x: hidden;   
 }
 
 #sub-modulo-container { min-width: 0; max-width: 100%; }
@@ -275,21 +222,15 @@ body.menu-riel .sidebar:not(.abierta) .tecla { display: none !important; }
     overflow-x: auto;
 }
 
-/* Barra horizontal comoda: por defecto Chrome la deja muy delgada y en una
-   caja registradora, con mouse barato, no se agarra. */
+
 .table-responsive::-webkit-scrollbar { height: 10px; }
 .table-responsive::-webkit-scrollbar-thumb { background: #B9BFC7; border-radius: 6px; }
 .table-responsive::-webkit-scrollbar-thumb:hover { background: #2B6CA3; }
 
-/* Un tornillo se llama 'Tornillo hexagonal con rondana 1-1/8" x 12"'. Sin
-   permiso de cortarse, ese nombre solo ya empuja la tabla fuera de pantalla. */
 #tabla-productos-body td,
 #tabla-faltantes-body td { word-break: break-word; }
 
-/* Los atributos se pintan como etiquetas. Con 6 por producto (tipo, largo,
-   cuerda, sistema, diametro, material) cada renglon se vuelve altisimo y
-   caben 3 productos por pantalla. Se limitan a dos renglones; la ficha
-   completa sigue a un clic del ojito. */
+
 #tabla-productos-body td > div > div:last-child {
     max-height: 3.2rem;
     overflow: hidden;

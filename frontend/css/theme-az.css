@@ -1,25 +1,12 @@
-/* ═══════════════════════════════════════════════════════════════════════
-   TEMA GLOBAL "MOSTRADOR AZ" — azul acero + carbón para TODA la aplicación
-   (deudas, clientes, historial, inventario, productos, compras, etc.)
-
-   Se carga DESPUÉS de style.css en index.html y re-pinta la identidad
-   completa sin tocar ni una línea de JavaScript de los módulos.
-
-   V2 — se cambió el naranja vivo original por un azul acero calmado:
-   más descansado para la vista en uso diario prolongado, mejor contraste,
-   y sigue leyéndose profesional y con carácter (no gris genérico).
-   ═══════════════════════════════════════════════════════════════════════ */
 
 :root {
-    --az:        #2B6CA3;   /* azul acero principal */
+    --az:        #2B6CA3;   
     --az-hover:  #1F5480;
-    --az-soft:   #E3EEF5;   /* azul muy pálido para fondos suaves */
+    --az-soft:   #E3EEF5;   
     --carbon:    #1B1D21;
     --acero:     #26292F;
 
-    /* Re-mapeo del sistema existente: el ámbar y el azul de acciones
-       primarias ahora son el azul de la casa. Verde (dinero/éxito) y
-       rojo (peligro) conservan su significado. */
+    
     --amber-600: var(--az);
     --amber-500: #4A8FC2;
     --amber-100: var(--az-soft);
@@ -28,7 +15,6 @@
     --blue-100:  var(--az-soft);
 }
 
-/* ── Tipografía de títulos: condensada industrial ──────────────────────── */
 h2.fw-bold, .modal-title, .card-header h5 {
     font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
     font-weight: 700;
@@ -37,7 +23,6 @@ h2.fw-bold, .modal-title, .card-header h5 {
 }
 h2.fw-bold i { color: var(--az); }
 
-/* ── Botones primarios → naranja ───────────────────────────────────────── */
 .btn-primary {
     background: var(--az) !important;
     border-color: var(--az) !important;
@@ -55,7 +40,6 @@ h2.fw-bold i { color: var(--az); }
     border-color: var(--az) !important;
     color: #fff !important;
 }
-/* Los warning (ámbar) también toman el naranja de la casa */
 .btn-warning, .btn-outline-warning:hover {
     background: var(--az) !important;
     border-color: var(--az) !important;
@@ -63,7 +47,6 @@ h2.fw-bold i { color: var(--az); }
 }
 .btn-outline-warning { color: var(--az) !important; border-color: var(--az) !important; }
 
-/* ── Acentos de texto/fondo primarios ──────────────────────────────────── */
 .text-primary { color: var(--az) !important; }
 .bg-primary, .badge.bg-primary { background: var(--az) !important; }
 .badge.bg-warning { background: var(--az) !important; color: #fff !important; }
@@ -71,7 +54,6 @@ a { color: var(--az); }
 a:hover { color: var(--az-hover); }
 .spinner-border.text-primary { color: var(--az) !important; }
 
-/* ── Encabezados de tabla → carbón (sello de la casa) ──────────────────── */
 .table thead.table-light,
 .table thead.table-light th,
 .table > thead > tr > th {
@@ -86,13 +68,11 @@ a:hover { color: var(--az-hover); }
 }
 .table-hover > tbody > tr:hover > * { background: var(--az-soft); }
 
-/* ── Formularios: foco naranja ─────────────────────────────────────────── */
 .form-control:focus, .form-select:focus {
     border-color: var(--az);
     box-shadow: 0 0 0 .2rem rgba(242, 97, 0, .18);
 }
 
-/* ── Menú lateral: activo en naranja ───────────────────────────────────── */
 .sidebar .nav-link.active,
 .nav-pills .nav-link.active {
     background: var(--az) !important;
@@ -102,13 +82,11 @@ a:hover { color: var(--az-hover); }
     color: #fff;
     box-shadow: inset 3px 0 0 var(--az);
 }
-/* La franja de señalización del borde del sidebar, en naranja */
 .sidebar::after {
     background: repeating-linear-gradient(
         45deg, var(--az) 0 10px, var(--carbon) 10px 20px) !important;
 }
 
-/* ── Tarjetas y paginación ─────────────────────────────────────────────── */
 .card { border-color: #DCE0E5; }
 .card-header { background: #fff; border-bottom: 2px solid var(--az); }
 .page-link { color: var(--az); }
@@ -116,16 +94,13 @@ a:hover { color: var(--az-hover); }
     background: var(--az); border-color: var(--az);
 }
 
-/* ── Pestañas (Vigentes/Cancelados, etc.) ──────────────────────────────── */
 .nav-tabs .nav-link.active {
     color: var(--az); border-bottom: 3px solid var(--az);
     font-weight: 700;
 }
 .nav-tabs .nav-link { color: var(--steel-600, #475569); }
 
-/* ── SweetAlert2: confirmar en naranja por defecto ─────────────────────── */
-/* (los modales que fijan su color inline —rojo de cancelar CFDI, verde de
-   cobro— lo conservan porque el estilo inline gana) */
+
 .swal2-styled.swal2-confirm {
     background-color: var(--az) !important;
 }
@@ -133,18 +108,13 @@ a:hover { color: var(--az-hover); }
     box-shadow: 0 0 0 3px rgba(242, 97, 0, .3) !important;
 }
 
-/* ── Barras de progreso y switches ─────────────────────────────────────── */
 .progress-bar { background-color: var(--az); }
 .form-check-input:checked { background-color: var(--az); border-color: var(--az); }
 
-/* ── Scrollbar sutil a juego (Chrome/Edge) ─────────────────────────────── */
 ::-webkit-scrollbar-thumb { background: #B9BFC7; border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--az); }
 
-/* ── SIDEBAR: una sola columna, siempre ────────────────────────────────── */
-/* Bootstrap pone flex-wrap:wrap en .nav: cuando los módulos no caben a lo
-   alto, el menú se DOBLA en una segunda columna que se encima al contenido.
-   nowrap lo prohíbe; si algún día no cabe, hace scroll vertical interno. */
+
 .sidebar { overflow: hidden; }
 #main-menu {
     flex-wrap: nowrap !important;
@@ -153,7 +123,6 @@ a:hover { color: var(--az-hover); }
     min-height: 0;
     scrollbar-width: thin;
 }
-/* Compactar: que toda la lista quepa en una pantalla normal */
 .sidebar .nav-link {
     padding: .4rem .75rem;
     font-size: .88rem;

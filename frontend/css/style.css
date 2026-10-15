@@ -1,14 +1,8 @@
-/* ══════════════════════════════════════════════════════════════════════════════
-   FerrePOS — Sistema de diseño "Taller de precisión"
-   Identidad: acero grafito + ámbar de señalización industrial.
-   Todas las clases y IDs originales se conservan (los módulos dependen de ellos).
-   ══════════════════════════════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-    /* ─── Paleta industrial ─────────────────────────────────────────────── */
-    --steel-950: #14181f;   /* grafito casi negro — sidebar */
+    --steel-950: #14181f;   
     --steel-900: #1b212b;
     --steel-800: #263041;
     --steel-700: #33415a;
@@ -18,19 +12,19 @@
     --steel-100: #eef2f7;
     --steel-50:  #f6f8fb;
 
-    --amber-600: #d97706;   /* ámbar de señalización — acento principal */
+    --amber-600: #d97706;   
     --amber-500: #f59e0b;
     --amber-400: #fbbf24;
     --amber-100: #fef3c7;
 
-    --blue-600:  #2563eb;   /* azul técnico — acciones primarias */
+    --blue-600:  #2563eb;   
     --blue-500:  #3b82f6;
     --blue-100:  #dbeafe;
 
     --green-600: #16a34a;
     --red-600:   #dc2626;
 
-    /* ─── Tokens de superficie ──────────────────────────────────────────── */
+    
     --bg-app:      #eff2f6;
     --bg-surface:  #ffffff;
     --bg-subtle:   #f6f8fb;
@@ -51,7 +45,6 @@
     --shadow-blue:  0 4px 14px rgba(37,99,235,.28);
     --transition: all .18s cubic-bezier(.4,0,.2,1);
 
-    /* Compatibilidad con variables originales */
     --color-stock-ok:   var(--green-600);
     --color-stock-low:  var(--amber-600);
     --color-stock-none: var(--red-600);
@@ -59,7 +52,6 @@
     --shadow-card: var(--shadow);
 }
 
-/* ─── BASE ───────────────────────────────────────────────────────────────────── */
 * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
 body {
@@ -69,7 +61,6 @@ body {
     letter-spacing: -.01em;
 }
 
-/* Números tabulares en datos/dinero para alineación perfecta */
 .font-monospace, .table td, .badge, .kpi-value, .kpi-card h4 {
     font-variant-numeric: tabular-nums;
 }
@@ -80,14 +71,12 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
     letter-spacing: -.02em;
 }
 
-/* ─── SIDEBAR ────────────────────────────────────────────────────────────────── */
 .sidebar {
     width: var(--sidebar-width);
     background: var(--steel-950) !important;
     border-right: 1px solid rgba(255,255,255,.05);
     position: relative;
 }
-/* Franja de señalización industrial en el borde del sidebar */
 .sidebar::after {
     content: '';
     position: absolute;
@@ -102,13 +91,11 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
 
 .sidebar .fs-4 { font-size: 1.1rem !important; font-weight: 800; letter-spacing: .3px; }
 
-/* Logo con placa de acero */
 .sidebar > a:first-child > div {
     background: linear-gradient(145deg, var(--amber-500), var(--amber-600)) !important;
     box-shadow: 0 2px 8px rgba(43,108,163,.4), inset 0 1px 0 rgba(255,255,255,.25);
 }
 
-/* Encabezados de sección — estilo etiqueta de tablero */
 .sidebar .nav-link.disabled {
     font-family: 'Archivo', sans-serif;
     font-weight: 700 !important;
@@ -140,7 +127,6 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
     border-color: rgba(148,163,184,.18);
     box-shadow: var(--shadow-sm);
 }
-/* Marca ámbar en el item activo — como pestaña de archivador */
 .sidebar .nav-link.active::before {
     content: '';
     position: absolute;
@@ -152,7 +138,6 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
 }
 .sidebar .nav-link i { width: 20px; text-align: center; font-size: 1rem; }
 
-/* Botón de tema */
 #btn-toggle-tema {
     background: rgba(255,255,255,.05) !important;
     color: var(--steel-300) !important;
@@ -167,20 +152,13 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
     color: #fff !important;
 }
 
-/* ─── TABLA DE PRODUCTOS ─────────────────────────────────────────────────────── */
-/* La tabla tiene 10 columnas y debe funcionar en 1366px con sidebar abierto.
-   Sidebar = 248px -> contenido disponible ≈ 1100px.
-   Cada th ya tiene su width/min-width. Aquí se asegura que la tabla tome
-   todo el ancho disponible y que el scroll horizontal aparezca si hace falta
-   (por ejemplo en tabletas o si el sidebar está abierto en una pantalla
-   de 1280px).                                                              */
+
 .tabla-productos-main {
     width: 100%;
-    table-layout: fixed;      /* respeta los anchos de los <th>             */
+    table-layout: fixed;      
     border-collapse: collapse;
 }
 
-/* Producto: columna flexible que absorbe el espacio restante */
 .tabla-productos-main th:nth-child(3),
 .tabla-productos-main td:nth-child(3) {
     overflow: hidden;
@@ -188,20 +166,16 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
     white-space: nowrap;
 }
 
-/* Acciones: los botones no se rompen en dos líneas */
 .tabla-productos-main td:last-child .btn-group {
     flex-wrap: nowrap;
     white-space: nowrap;
 }
 
-/* Scroll horizontal si de verdad no cabe (ej. pantalla muy pequeña o
-   sidebar + contenido > ancho de pantalla).                               */
 .card .table-responsive {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
 
-/* ─── MAIN CONTENT ───────────────────────────────────────────────────────────── */
 #main-content {
     background: var(--bg-app) !important;
     background-image:
@@ -209,14 +183,12 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
     background-size: 22px 22px;
 }
 
-/* Encabezados de página */
 #main-content h2 {
     font-weight: 800;
     color: var(--text);
     letter-spacing: -.03em;
 }
 
-/* ─── CARDS ──────────────────────────────────────────────────────────────────── */
 .card {
     border-radius: var(--radius-lg) !important;
     box-shadow: var(--shadow-sm) !important;
@@ -233,7 +205,6 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
 }
 .card-footer { border-top: 1px solid var(--border) !important; }
 
-/* ─── TABLAS ─────────────────────────────────────────────────────────────────── */
 .table { font-size: .875rem; color: var(--text); }
 .table th {
     font-family: 'Archivo', sans-serif;
@@ -250,12 +221,10 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
 .table-hover tbody tr:hover { background: var(--amber-100) !important; cursor: default; }
 .table td { vertical-align: middle; border-color: var(--border) !important; }
 .table-light th, .table-light { background: var(--bg-subtle) !important; }
-/* Encabezado de tabla oscuro (usado en Deudas, PDF, etc.) */
 .table-dark, thead.table-dark tr, tr.table-dark {
     --bs-table-bg: var(--steel-900);
 }
 
-/* ─── BADGES DE STOCK ────────────────────────────────────────────────────────── */
 .stock-ok   { background: #d1fae5 !important; color: #065f46 !important; }
 .stock-low  { background: var(--amber-100) !important; color: #92400e !important; }
 .stock-none { background: #fee2e2 !important; color: #991b1b !important; }
@@ -267,7 +236,6 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
 .btn-add-none { color: #9ca3af !important; border-color: #e5e7eb !important;
                 background: #f9fafb !important; cursor: not-allowed !important; }
 
-/* ─── BÚSQUEDA CON AUTOCOMPLETE ──────────────────────────────────────────────── */
 .search-wrapper { position: relative; }
 
 .search-input {
@@ -316,7 +284,6 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
 
 .search-empty { padding: 1.5rem; text-align: center; color: var(--text-faint); font-size: .875rem; }
 
-/* ─── BOTONES ────────────────────────────────────────────────────────────────── */
 .btn {
     border-radius: var(--radius-sm) !important;
     font-weight: 600;
@@ -335,7 +302,6 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
 .btn-success:hover { background: #15803d !important; border-color: #15803d !important;
     transform: translateY(-1px); box-shadow: 0 4px 14px rgba(22,163,74,.28) !important; }
 
-/* Ámbar como acento principal de acciones destacadas */
 .btn-warning { background: var(--amber-600) !important; border-color: var(--amber-600) !important;
     color: #fff !important; }
 .btn-warning:hover { background: #b45309 !important; border-color: #b45309 !important;
@@ -364,7 +330,6 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
     color: var(--text) !important; }
 .btn-light:hover { background: var(--steel-100) !important; }
 
-/* ─── FORMULARIOS ────────────────────────────────────────────────────────────── */
 .form-control, .form-select {
     border-radius: var(--radius-sm) !important;
     border: 1.5px solid var(--border-strong) !important;
@@ -385,7 +350,6 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
     background: var(--bg-subtle); color: var(--text-soft);
 }
 
-/* ─── NAV PILLS / TABS ───────────────────────────────────────────────────────── */
 .nav-pills:not(.flex-column) .nav-link {
     border-radius: var(--radius-sm) !important;
     font-size: .85rem; font-weight: 600;
@@ -399,7 +363,6 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
     background: var(--amber-100); color: var(--amber-600);
 }
 
-/* Tabs (nav-tabs) — estilo pestañas de archivador industrial */
 .nav-tabs { border-bottom: 2px solid var(--border) !important; }
 .nav-tabs .nav-link {
     border: none !important;
@@ -419,7 +382,6 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
 
 .bg-light.p-2.rounded, .bg-light { background: var(--bg-subtle) !important; }
 
-/* ─── KPI CARDS ──────────────────────────────────────────────────────────────── */
 .kpi-card {
     border-left: 4px solid transparent;
     transition: var(--transition);
@@ -432,7 +394,6 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
 }
 .kpi-value, .kpi-card h4 { font-family:'Archivo',sans-serif; font-weight: 800; letter-spacing: -.03em; }
 
-/* ─── MODALES ────────────────────────────────────────────────────────────────── */
 .modal-content {
     border-radius: var(--radius-lg) !important;
     border: 1px solid var(--border) !important;
@@ -448,7 +409,6 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
 .modal-header .modal-title { font-family:'Archivo',sans-serif; font-weight: 700; }
 .modal-footer { border-top: 1px solid var(--border) !important; background: var(--bg-subtle); }
 
-/* ─── LISTA CARRITO / LIST-GROUP ─────────────────────────────────────────────── */
 .list-group-item {
     border-color: var(--border);
     transition: background .12s;
@@ -458,7 +418,6 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
 #lista-carrito .list-group-item:first-child { border-top: none; }
 #lista-carrito .list-group-item:hover { background: var(--amber-100); }
 
-/* ─── BADGES ─────────────────────────────────────────────────────────────────── */
 .badge {
     font-family:'Inter',sans-serif;
     font-weight: 600 !important;
@@ -467,10 +426,8 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
     padding: .35em .6em;
 }
 
-/* ─── ALERTS ─────────────────────────────────────────────────────────────────── */
 .alert { border-radius: var(--radius) !important; border-width: 1px; }
 
-/* ─── SCROLLBAR ──────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--steel-300); border-radius: 99px;
@@ -478,7 +435,6 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
 ::-webkit-scrollbar-thumb:hover { background: var(--steel-400); background-clip: content-box; }
 .sidebar ::-webkit-scrollbar-thumb { background: var(--steel-700); background-clip: content-box; }
 
-/* ─── ANIMACIONES ────────────────────────────────────────────────────────────── */
 @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -495,9 +451,7 @@ h1,h2,h3,h4,h5,h6, .fw-bold {
 #dropdown-categorias-filtro .dropdown-item { border-radius: 6px; font-size: .875rem; }
 #dropdown-categorias-filtro .dropdown-item:hover { background: var(--amber-100); color: var(--amber-600); }
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   TEMA OSCURO — grafito profundo con acento ámbar (legible y consistente)
-   ══════════════════════════════════════════════════════════════════════════════ */
+
 body.dark-mode {
     --bg-app:      #0d1017;
     --bg-surface:  #161b24;
@@ -601,32 +555,26 @@ body.dark-mode .badge.bg-light { background: var(--bg-subtle) !important; color:
 body.dark-mode .table-responsive { border-color: var(--border); }
 body.dark-mode hr { border-color: var(--border); }
 
-/* Subtles de Bootstrap en oscuro (badges bg-*-subtle) */
 body.dark-mode .bg-success-subtle { background: rgba(22,163,74,.16) !important; color:#6ee7b7 !important; }
 body.dark-mode .bg-danger-subtle  { background: rgba(220,38,38,.16) !important; color:#fca5a5 !important; }
 body.dark-mode .bg-warning-subtle { background: rgba(217,119,6,.16) !important; color:var(--amber-400) !important; }
 body.dark-mode .bg-info-subtle    { background: rgba(8,145,178,.16) !important; color:#67e8f9 !important; }
 body.dark-mode .bg-primary-subtle { background: rgba(37,99,235,.16) !important; color:#93c5fd !important; }
 
-/* Transición suave al cambiar de tema */
 body, body * {
     transition: background-color .2s ease, border-color .2s ease, color .12s ease;
 }
 
-/* ─── RESPONSIVE / MÓVIL ─────────────────────────────────────────────────────── */
 
-/* Botón hamburguesa y overlay: ocultos en escritorio */
 #btn-menu-movil, #overlay-sidebar { display: none; }
 
 @media (max-width: 860px) {
 
-    /* Evita el "zoom"/scroll horizontal: nada se sale del ancho de pantalla */
     html, body { max-width: 100%; overflow-x: hidden; }
     #main-content { max-width: 100vw; }
     .row { margin-left: 0; margin-right: 0; }
     img, table, .card, .modal-content { max-width: 100%; }
 
-    /* Sidebar se convierte en panel deslizable */
     .sidebar {
         position: fixed;
         top: 0; left: 0;
@@ -639,7 +587,6 @@ body, body * {
     }
     .sidebar.open { transform: translateX(0); }
 
-    /* Fondo oscuro al abrir el menú */
     #overlay-sidebar {
         display: block;
         position: fixed; inset: 0;
@@ -650,7 +597,6 @@ body, body * {
     }
     #overlay-sidebar.show { opacity: 1; pointer-events: auto; }
 
-    /* Botón hamburguesa flotante */
     #btn-menu-movil {
         display: flex;
         position: fixed;
@@ -667,13 +613,9 @@ body, body * {
     }
     body.dark-mode #btn-menu-movil { background: var(--steel-800); }
 
-    /* El contenido usa todo el ancho, con espacio para el botón */
     #main-content { padding: 4rem 1rem 1.5rem !important; }
     #main-content h2 { font-size: 1.35rem; }
 
-    /* ── Tablas: se vuelven "tarjetas" apiladas ──
-       Cada fila se convierte en un bloque; cada celda muestra su etiqueta.
-       Requiere data-label en los <td> (se inyecta por JS). */
     table.tabla-movil thead { display: none; }
     table.tabla-movil, table.tabla-movil tbody,
     table.tabla-movil tr, table.tabla-movil td { display: block; width: 100%; }
@@ -710,15 +652,12 @@ body, body * {
         flex: 0 0 38%;
         min-width: 0;
     }
-    /* El valor de la celda ocupa el resto y se alinea a la derecha */
     table.tabla-movil td > * { margin-left: auto; }
-    /* Primera celda (nombre/producto) destaca como título de la tarjeta */
     table.tabla-movil td:first-child {
         background: var(--bg-subtle);
         font-weight: 600;
         border-radius: var(--radius-sm) var(--radius-sm) 0 0;
     }
-    /* Celdas sin etiqueta (acciones) ocupan todo el ancho, centradas */
     table.tabla-movil td[data-label=""] {
         justify-content: center;
         flex-wrap: wrap;
@@ -728,32 +667,25 @@ body, body * {
     }
     table.tabla-movil td[data-label=""]::before { display: none; }
     table.tabla-movil td[data-label=""] > * { margin-left: 0; }
-    /* Imágenes de producto en la tarjeta no gigantes */
     table.tabla-movil td img { max-width: 46px; height: auto; }
 
-    /* Botones y KPIs más cómodos al tacto */
     .btn { min-height: 38px; }
     .btn-group-sm > .btn, .btn-sm { min-height: 34px; }
     .kpi-card { margin-bottom: .5rem; }
 
-    /* Modales casi a pantalla completa */
     .modal-dialog { margin: .5rem; max-width: calc(100% - 1rem); }
 
-    /* Filtros y búsquedas apiladas */
     .row.g-3 > [class*="col-"] { margin-bottom: .5rem; }
 
-    /* Botones de encabezado no se encoiman */
     .d-flex.justify-content-between.align-items-center { flex-wrap: wrap; gap: .5rem; }
 }
 
-/* Pantallas muy chicas */
 @media (max-width: 400px) {
     #main-content { padding: 3.75rem .7rem 1rem !important; }
     .modal-dialog { margin: .25rem; max-width: calc(100% - .5rem); }
     .btn-lg { padding: .6rem 1rem !important; font-size: .9rem !important; }
 }
 
-/* ─── AVISO "SOLO EN COMPUTADORA" (Ventas en móvil) ──────────────────────────── */
 #aviso-solo-desktop { display: none; }
 @media (max-width: 860px) {
     #aviso-solo-desktop {
@@ -770,20 +702,17 @@ body, body * {
     #aviso-solo-desktop h3 { font-weight: 800; color: var(--text); }
 }
 
-/* Accesibilidad: respetar preferencia de menos movimiento */
 @media (prefers-reduced-motion: reduce) {
     *, body * { transition: none !important; animation: none !important; }
     .sidebar .nav-link:hover { transform: none; }
     .btn:hover { transform: none; }
 }
 
-/* Foco visible por teclado (accesibilidad) */
 :focus-visible {
     outline: 2.5px solid var(--amber-500);
     outline-offset: 2px;
 }
 
-/* ═══ FALTANTES: filas por nivel de urgencia ══════════════════════════════ */
 .falt-row-agotado { background: #FFF5F5; }
 .falt-row-agotado:hover { background: #FEE2E2; }
 .falt-row-agotado td:first-child { border-left: 4px solid #B91C1C; }
@@ -792,14 +721,11 @@ body, body * {
 .falt-row-bajo:hover { background: #FEF9C3; }
 .falt-row-bajo td:first-child { border-left: 4px solid #B45309; }
 
-/* En camino: atenúa la fila, borde verde */
 .falt-row-pedido { opacity: .5; filter: grayscale(.3); transition: opacity .2s, filter .2s; }
 .falt-row-pedido:hover { opacity: .85; filter: grayscale(0); }
 .falt-row-pedido td:first-child { border-left: 4px solid #15803D !important; }
 
-/* Switch verde cuando está activo */
 .falt-sw-pedido:checked { background-color: #15803D; border-color: #15803D; }
 
-/* Encabezado de sección */
 .falt-sec-hdr td { border-top: 2px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; }
 .falt-sec-hdr:first-child td { border-top: none; }
