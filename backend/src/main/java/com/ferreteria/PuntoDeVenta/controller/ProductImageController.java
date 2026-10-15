@@ -9,13 +9,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Galería de fotos de un producto.
- *   GET    /api/products/{id}/imagenes            → lista (principal primero)
- *   POST   /api/products/{id}/imagenes            → agrega { url, titulo }
- *   DELETE /api/products/{id}/imagenes/{imgId}    → borra (también el archivo)
- *   PATCH  /api/products/{id}/imagenes/{imgId}/principal → la vuelve principal
- */
 @RestController
 @RequestMapping("/api/products/{productId}/imagenes")
 @RequiredArgsConstructor

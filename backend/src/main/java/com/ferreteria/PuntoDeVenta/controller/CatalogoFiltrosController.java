@@ -18,8 +18,7 @@ public class CatalogoFiltrosController {
 
     private final CatalogoFiltrosRepository repo;
 
-    // ── Selects en cascada ────────────────────────────────────────────────────
-
+    
     @Operation(summary = "Lista de tipos de vehículo")
     @GetMapping("/tipos")
     public ResponseEntity<List<String>> getTipos() {
@@ -60,8 +59,7 @@ public class CatalogoFiltrosController {
                 repo.findDistinctMotoresByTipoMarcaModeloAnio(tipo, marca, modelo, anio));
     }
 
-    // ── Búsquedas ─────────────────────────────────────────────────────────────
-
+    
     @Operation(summary = "Buscar por vehículo completo")
     @GetMapping("/buscar")
     public ResponseEntity<List<CatalogoFiltros>> buscarPorVehiculo(
@@ -93,8 +91,7 @@ public class CatalogoFiltrosController {
         return ResponseEntity.ok(repo.findByEquivalente(parte.trim()));
     }
 
-    // ── CRUD admin ────────────────────────────────────────────────────────────
-
+   
     @Operation(summary = "Agregar entrada al catálogo")
     @PostMapping
     public ResponseEntity<CatalogoFiltros> crear(@RequestBody CatalogoFiltros filtro) {

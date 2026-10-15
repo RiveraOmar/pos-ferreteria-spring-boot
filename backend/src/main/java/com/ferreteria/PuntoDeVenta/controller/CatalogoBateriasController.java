@@ -55,8 +55,6 @@ public class CatalogoBateriasController {
         }
         return ResponseEntity.ok(repo.findByTextoLibre(q.trim()));
     }
-
-    // CRUD Administrativo
     @Operation(summary = "Agregar entrada al catálogo de baterías")
     @PostMapping
     public ResponseEntity<CatalogoBaterias> crear(@RequestBody CatalogoBaterias bateria) {

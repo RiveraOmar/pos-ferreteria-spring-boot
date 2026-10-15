@@ -62,7 +62,6 @@ public class PrefacturaController {
         return ResponseEntity.ok(prefacturaService.cambiarEstado(id, body.get("status")));
     }
 
-    // Manejar preflight OPTIONS explícitamente
     @RequestMapping(value = "/**", method = RequestMethod.OPTIONS)
     public ResponseEntity<?> options() {
         return ResponseEntity.ok().build();

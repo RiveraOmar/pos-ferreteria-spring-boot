@@ -6,11 +6,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-
-/**
- * Catálogo automotriz Gates: bandas, bombas de agua, tensores, tapones,
- * termostatos, mangueras... buscables por vehículo o por número de parte.
- */
 @RestController
 @RequestMapping("/api/catalogo-auto")
 @RequiredArgsConstructor

@@ -10,10 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Libreta de apuntes de Faltantes: notas de texto libre para cosas que
- * hacen falta pero no están dadas de alta como producto en el sistema.
- */
+
 @RestController
 @RequestMapping("/api/notas-faltantes")
 @RequiredArgsConstructor

@@ -18,14 +18,11 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*") // Ajustar según seguridad
+@CrossOrigin(origins = "*") 
 public class ProductController {
 
     private final ProductService productService;
 
-    // incluirInactivos: por defecto NO. Ventas, Faltantes y el buscador del
-    // mostrador reciben solo lo que de verdad manejas. El módulo de Productos
-    // lo pide en true para poder ver el catálogo dormido y activarlo.
     @GetMapping
     public List<ProductResponseDTO> getAll(
             @RequestParam(defaultValue = "false") boolean incluirInactivos) {
@@ -62,8 +59,6 @@ public class ProductController {
         return ResponseEntity.ok(productService.getById(id));
     }
 
-    // Ficha completa de solo lectura: atributos, SAT, historial de precio
-    // y proveedores que surten el producto, todo en una sola llamada.
     @GetMapping("/{id}/full-details")
     public ResponseEntity<ProductFullDetailsDTO> getFullDetails(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getFullDetails(id));
@@ -75,19 +70,16 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.CREATED).body(productService.convertToDTO(saved));
     }
 
-    // ── Sugerencia de compra: stock bajo agrupado por proveedor ──────────
     @GetMapping("/sugerencia-compra")
     public ResponseEntity<?> sugerenciaCompra() {
         return ResponseEntity.ok(productService.sugerenciaCompra());
     }
 
-    // Catálogo de UN proveedor con recomendación (para armar su pedido)
     @GetMapping("/sugerencia-compra/proveedor/{supplierId}")
     public ResponseEntity<?> sugerenciaPorProveedor(@PathVariable Long supplierId) {
         return ResponseEntity.ok(productService.catalogoProveedorParaCompra(supplierId));
     }
 
-    // ── Proveedores que surten este producto ─────────────────────────────
     @GetMapping("/{id}/suppliers")
     public ResponseEntity<?> proveedoresDelProducto(@PathVariable Long id) {
         return ResponseEntity.ok(productService.proveedoresDeProducto(id));

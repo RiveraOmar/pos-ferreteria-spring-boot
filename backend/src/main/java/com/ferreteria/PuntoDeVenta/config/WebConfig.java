@@ -7,11 +7,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.nio.file.Paths;
 
-/**
- * Sirve las imágenes de producto subidas (carpeta física `uploads/`) bajo la
- * URL pública `/uploads/**`. Así una foto guardada como `/uploads/prod_ab12.jpg`
- * se puede mostrar directamente en un <img src="...">.
- */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 

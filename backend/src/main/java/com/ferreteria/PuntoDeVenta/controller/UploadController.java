@@ -24,18 +24,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Subida de imágenes de producto (foto de la cámara del celular o de galería).
- *
- * COMPRESIÓN AUTOMÁTICA: una foto de celular pesa 3-8 MB, pero para ver un
- * producto basta con ~1200 px y calidad alta → queda en 200-400 KB. Aquí se
- * reduce ANTES de guardarla. Beneficios: el disco dura años, las listas cargan
- * rápido en el celular, y los respaldos son ligeros. La foto original no se
- * conserva (no hace falta para un catálogo).
- *
- * El archivo se guarda en disco y se devuelve su URL; en la base de datos solo
- * viaja esa URL (nunca la imagen en sí).
- */
 @Slf4j
 @RestController
 @RequestMapping("/api/uploads")
@@ -44,19 +32,13 @@ public class UploadController {
     @Value("${app.uploads.dir:uploads}")
     private String uploadsDir;
 
-    /**
-     * Ancho máximo de la foto guardada (px). 1600 permite hacer zoom y LEER
-     * la letra chica de una etiqueta o una hoja de especificaciones, que es
-     * justo para lo que sirven las fotos secundarias. Queda en ~350 KB.
-     */
     @Value("${app.uploads.max-width:1600}")
     private int maxAncho;
 
-    /** Calidad JPEG: 0.88 = se ve nítida al ampliar, sin archivos enormes. */
     @Value("${app.uploads.jpeg-quality:0.88}")
     private float calidad;
 
-    private static final long MAX_BYTES = 12 * 1024 * 1024; // 12 MB de entrada
+    private static final long MAX_BYTES = 12 * 1024 * 1024; 
 
     @PostMapping("/producto-imagen")
     public ResponseEntity<Map<String, String>> subirImagen(
@@ -106,19 +88,15 @@ public class UploadController {
         }
     }
 
-    /** Reduce la imagen si es más ancha que el máximo, conservando proporción. */
     private BufferedImage redimensionar(BufferedImage origen, int anchoMax) {
         int w = origen.getWidth(), h = origen.getHeight();
 
-        // Si la foto ya es más chica que el máximo NO se agranda: estirarla
-        // solo la haría verse pixeleada sin ganar detalle.
-        int nuevoW = w, nuevoH = h;
+         int nuevoW = w, nuevoH = h;
         if (w > anchoMax) {
             nuevoW = anchoMax;
             nuevoH = (int) Math.round(h * (anchoMax / (double) w));
         }
 
-        // Fondo blanco: los PNG con transparencia se verían negros al pasar a JPEG
         BufferedImage salida = new BufferedImage(nuevoW, nuevoH, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = salida.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
@@ -134,7 +112,6 @@ public class UploadController {
         return salida;
     }
 
-    /** Guarda como JPEG con la calidad indicada. */
     private void guardarJpeg(BufferedImage img, Path destino, float calidad) throws IOException {
         Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
         if (!writers.hasNext()) throw new IOException("Sin codificador JPEG disponible");
@@ -153,7 +130,6 @@ public class UploadController {
         }
     }
 
-    /** Mensaje claro cuando la foto supera el límite de multipart de Spring. */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, String>> tamanoExcedido(
             MaxUploadSizeExceededException e) {

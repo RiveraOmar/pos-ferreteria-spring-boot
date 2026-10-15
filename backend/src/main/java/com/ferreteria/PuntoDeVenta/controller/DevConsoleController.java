@@ -9,20 +9,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-/**
- * ═══════════════════════════════════════════════════════════════════════════
- *  CONSOLA DE DESARROLLO — ejecuta SQL directo contra PostgreSQL
- *
- *  Equivalente en poder a pgAdmin, pensado para operar desde el navegador.
- *  Protegido en SecurityConfig: solo ROLE_ADMIN puede llegar a /api/dev/**.
- *
- *  ⚠️ Sin las validaciones de negocio del resto del sistema (no valida
- *  precios, stock, reglas fiscales, etc.) — es acceso directo a la base.
- *  Cada ejecución queda registrada en el log del backend y en la tabla
- *  dev_console_log (ver DevConsoleService) para poder auditar qué se
- *  ejecutó y cuándo.
- * ═══════════════════════════════════════════════════════════════════════════
- */
 @RestController
 @RequestMapping("/api/dev")
 @RequiredArgsConstructor

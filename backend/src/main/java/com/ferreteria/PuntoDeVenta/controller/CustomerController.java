@@ -82,7 +82,6 @@ public class CustomerController {
                         .map(this::convertToDTO).collect(Collectors.toList()));
     }
 
-    // ── Mapeos ────────────────────────────────────────────────
 
     private CustomerResponseDTO convertToDTO(Customer c) {
         return new CustomerResponseDTO(

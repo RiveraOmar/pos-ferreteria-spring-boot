@@ -59,8 +59,6 @@ public class SupplierController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── Productos que ya le has comprado a este proveedor, con su último costo ──
-    // Útil al registrar una nueva compra: evita escribir todo desde cero.
     @GetMapping("/{id}/products")
     public List<SupplierProductDTO> productosDelProveedor(@PathVariable Long id) {
         return supplierService.productosDelProveedor(id);

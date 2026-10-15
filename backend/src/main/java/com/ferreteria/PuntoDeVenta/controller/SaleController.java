@@ -64,14 +64,7 @@ public class SaleController {
                 saleService.buscarConFiltros(inicio, fin, status, texto));
     }
 
-    /**
-     * Ventas DEL PERIODO pendientes de factura global. El periodo es
-     * autodescriptivo — trae su propia periodicidad — formato "LETRA:FECHA":
-     *   D:2026-08-29  → un día              S:2026-08-24  → una semana
-     *   Q:2026-08-16  → una quincena        M:2026-08-01  → un mes
-     * Si no se manda, se usa el periodo ACTUAL según la periodicidad que
-     * el dueño tenga configurada (Facturación → Configurar periodicidad).
-     */
+    
     @Operation(summary = "Ventas del periodo para factura global (periodicidad configurable)")
     @GetMapping("/publico-general/periodo")
     public ResponseEntity<Map<String, Object>> ventasPublicoGeneralPeriodo(
@@ -86,14 +79,12 @@ public class SaleController {
         return ResponseEntity.ok(saleService.getVentasPublicoGeneralHoy());
     }
 
-    /** Descarta una venta del flujo de factura global (deja de ser pendiente). */
     @PatchMapping("/{id}/descartar-global")
     public ResponseEntity<?> descartarDeGlobal(@PathVariable Long id) {
         saleService.descartarDeGlobal(id);
         return ResponseEntity.ok(Map.of("descartada", id));
     }
 
-    /** Descarta TODAS las pendientes de PERIODOS ANTERIORES al indicado. */
     @PatchMapping("/descartar-global-anteriores")
     public ResponseEntity<?> descartarAnteriores(
             @RequestParam(required = false) String periodo) {
@@ -101,7 +92,6 @@ public class SaleController {
         return ResponseEntity.ok(Map.of("descartadas", n));
     }
 
-    /** "Q:2026-08-16" (o vacío) → PeriodoFiscal según la config actual si falta. */
     private com.ferreteria.PuntoDeVenta.util.PeriodoFiscal parsePeriodo(String periodo) {
         if (periodo == null || periodo.isBlank())
             return saleService.periodoActualConfigurado();

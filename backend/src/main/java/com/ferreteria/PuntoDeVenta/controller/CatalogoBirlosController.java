@@ -13,15 +13,6 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * ═══════════════════════════════════════════════════════════════════════
- *  CATÁLOGO DE BIRLOS — Internacionales León
- *  Tres formas de buscar, igual que en el mostrador:
- *    1. Por VEHÍCULO  (marca + modelo)   → qué birlo lleva
- *    2. Por MEDIDA    (Ø estría mm/pulg) → qué códigos coinciden
- *    3. Por CÓDIGO    (BRxx-xxx)         → especificación + aplicaciones
- * ═══════════════════════════════════════════════════════════════════════
- */
 @RestController
 @RequestMapping("/api/catalogo-birlos")
 @RequiredArgsConstructor
@@ -48,7 +39,6 @@ public class CatalogoBirlosController {
                         : appRepo.findByMarcaIgnoreCaseAndAplicacionContainingIgnoreCaseOrderByAplicacion(
                         marca, q);
 
-        // Adjuntar la especificación de cada código en UNA sola consulta
         List<String> codigos = apps.stream()
                 .map(CatalogoBirloAplicacion::getCodigo).distinct().toList();
         Map<String, CatalogoBirlo> specs = birloRepo.findByCodigoIn(codigos)

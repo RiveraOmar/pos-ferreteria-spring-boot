@@ -19,7 +19,6 @@ public class PdfCfdiController {
 
     private final PdfCfdiService pdfCfdiService;
 
-    // Devuelve PDF como bytes para descarga directa
     @Operation(summary = "Descargar PDF de un CFDI timbrado")
     @GetMapping("/pdf/{uuid}")
     public ResponseEntity<byte[]> descargarPdf(@PathVariable String uuid) {
@@ -31,7 +30,6 @@ public class PdfCfdiController {
                 .body(pdfBytes);
     }
 
-    // Devuelve PDF en base64 para el frontend
     @Operation(summary = "Obtener PDF de un CFDI en base64")
     @GetMapping("/pdf/base64/{uuid}")
     public ResponseEntity<Map<String, String>> obtenerPdfBase64(@PathVariable String uuid) {

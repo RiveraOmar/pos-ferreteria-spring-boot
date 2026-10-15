@@ -32,7 +32,6 @@ public class CartController {
             @PathVariable Long productId,
             @RequestParam BigDecimal quantity) {
 
-        // 1. Validar stock
         boolean canAdd = inventoryService.hasEnoughStock(productId, quantity);
 
         if (!canAdd) {
@@ -40,11 +39,9 @@ public class CartController {
                     .body("No se puede agregar al carrito: Stock insuficiente.");
         }
 
-        // 2. Obtener entidad
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado con ID: " + productId));
 
-        // 3. Mapear categoría a DTO slim (si existe)
         ProductResponseDTO.CategorySlimDTO categoryDTO = null;
         if (product.getCategory() != null) {
             categoryDTO = new ProductResponseDTO.CategorySlimDTO(
@@ -62,7 +59,6 @@ public class CartController {
                 product.getCostPrice() != null
                         ? PriceEncoder.encode(product.getCostPrice())
                         : "0000",
-                // ✅ FIX: orElse(BigDecimal.ZERO) en lugar de orElse(0)
                 inventoryService.getStockStatus(productId)
                         .map(inv -> inv.getStockActual())
                         .orElse(BigDecimal.ZERO),

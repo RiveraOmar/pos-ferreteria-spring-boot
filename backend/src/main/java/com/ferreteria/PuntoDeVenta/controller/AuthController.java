@@ -14,10 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Login: recibe usuario y contraseña, y si son correctos devuelve un token JWT
- * que el frontend guarda y manda en cada petición siguiente.
- */
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor

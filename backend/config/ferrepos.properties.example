@@ -1,14 +1,3 @@
-# ══════════════════════════════════════════════════════════════════════════════
-# FerrePOS — ARCHIVO ÚNICO DE CONFIGURACIÓN DE LA INSTALACIÓN
-# ══════════════════════════════════════════════════════════════════════════════
-# Copia este archivo como "ferrepos.properties" (mismo folder) y rellena tus
-# propios valores. "ferrepos.properties" ya está en .gitignore: nunca lo subas
-# a Git ni lo compartas, porque ahí van tus contraseñas y llaves reales.
-#
-# Ubicación: carpeta  config/  junto al pom.xml (o junto al .jar en producción).
-# Todo lo que cambia entre una ferretería y otra vive AQUÍ.
-# El resto del programa no se toca.
-# ══════════════════════════════════════════════════════════════════════════════
 
 # ─── 1. BASE DE DATOS ─────────────────────────────────────────────────────────
 spring.datasource.url=jdbc:postgresql://localhost:5432/ferreteria
@@ -50,30 +39,12 @@ spring.servlet.multipart.max-file-size=12MB
 spring.servlet.multipart.max-request-size=12MB
 
 # ─── 8. SEGURIDAD JWT (login con token) ───────────────────────────────────────
-# Clave secreta para firmar los tokens. DEBE ser larga y aleatoria.
-# Genera una nueva con:  python -c "import secrets; print(secrets.token_urlsafe(48))"
-# NUNCA la subas a Git ni la compartas. Si se filtra, cualquiera puede
-# falsificar sesiones.
 app.jwt.secret=GENERA_UNA_CLAVE_ALEATORIA_LARGA_AQUI
-# Duración del token en milisegundos (43200000 = 12 horas)
 app.jwt.expiration-ms=43200000
 
-# Compresión automática: toda foto subida se reduce a este ancho máximo (px)
-# y se guarda como JPEG con esta calidad. Una foto de celular de 5 MB queda
-# en ~250 KB sin perder detalle útil. Subir estos valores = fotos más pesadas.
 app.uploads.max-width=1600
 app.uploads.jpeg-quality=0.88
 
 # ─── 9. FACTURA GLOBAL (Público en General) ───────────────────────────────────
-# La PERIODICIDAD (diaria / semanal / quincenal / mensual) ya NO se configura
-# aquí: el dueño la cambia desde el front en Facturación → Configurar
-# periodicidad (tabla configuracion_facturacion, aplica de inmediato).
-# Este archivo solo controla si el timbrado automático corre o no, y a
-# qué hora se revisa — la periodicidad activa decide sola qué está "cerrado".
 facturaglobal.auto.enabled=true
-
-# Hora de la revisión diaria (aplica sin importar la periodicidad elegida):
-# a esta hora el sistema ve si algún periodo (día/semana/quincena/mes) ya
-# cerró y tiene ventas pendientes, y si es así lo timbra solo. El SAT da
-# 72 horas después del cierre del periodo, así que sobra margen.
 facturaglobal.auto.cron=0 30 9 * * *

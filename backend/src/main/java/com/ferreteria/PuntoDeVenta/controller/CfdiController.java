@@ -25,14 +25,12 @@ public class CfdiController {
     private final FacturaGlobalScheduler facturaGlobalService;
     private final com.ferreteria.PuntoDeVenta.service.SaleService saleService;
 
-    // ── Preview del XML que se va a enviar (sin timbrar, sin credenciales) ───
     @Operation(summary = "Ver XML SOAP que se enviaría a FEL — sin timbrar")
     @GetMapping("/preview/{saleId}")
     public ResponseEntity<String> preview(@PathVariable Long saleId) {
         return ResponseEntity.ok(cfdiService.previewXmlSoap(saleId));
     }
 
-    // ── Timbrar factura global (periodicidad configurada) con ventas seleccionadas ──
     @Operation(summary = "Timbrar Factura Global de Público General")
     @PostMapping("/timbrar/factura-global")
     public ResponseEntity<?> timbrarFacturaGlobal(
@@ -45,7 +43,7 @@ public class CfdiController {
                     "folio",   cfdi.getFolio() != null ? cfdi.getFolio() : "",
                     "total",   cfdi.getTotal(),
                     "status",  cfdi.getStatus(),
-                    "mensaje", "✅ Factura Global timbrada correctamente"
+                    "mensaje", "Factura Global timbrada correctamente"
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -53,17 +51,7 @@ public class CfdiController {
         }
     }
 
-    /**
-     * Timbra de un jalón TODOS los periodos con ventas pendientes hasta el
-     * periodo indicado — una factura global por periodo, como exige el nodo
-     * InformacionGlobal. Útil cuando llevas varios periodos sin facturar.
-     *
-     * periodo: "Q:2026-08-16" (si se omite, el periodo actual según la
-     *   periodicidad configurada — ver /api/configuracion/facturacion).
-     * incluirPeriodoEnCurso: por defecto false, porque un periodo que aún no
-     *   cierra seguiría recibiendo ventas después de timbrar. Ponlo en true
-     *   solo si ya no vas a vender más en ese periodo.
-     */
+   
     @Operation(summary = "Timbrar la global de todos los periodos pendientes")
     @PostMapping("/timbrar/factura-global/periodo")
     public ResponseEntity<?> timbrarGlobalPeriodo(
@@ -93,7 +81,7 @@ public class CfdiController {
                             "receptor", c.getNombreReceptor() != null
                                     ? c.getNombreReceptor() : ""
                     )).toList(),
-                    "mensaje", "✅ " + emitidas.size()
+                    "mensaje", " " + emitidas.size()
                             + " factura(s) global(es) timbrada(s)"));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -101,8 +89,7 @@ public class CfdiController {
         }
     }
 
-    // ── Timbrar una venta individual (clientes con RFC) ──────────────────────
-    @PostMapping("/timbrar/venta/{saleId}")
+     @PostMapping("/timbrar/venta/{saleId}")
     public ResponseEntity<?> timbrarVenta(@PathVariable Long saleId) {
         try {
             CfdiTimbrado cfdi = cfdiService.timbrarVenta(saleId);
@@ -111,7 +98,7 @@ public class CfdiController {
                     "folio",  cfdi.getFolio() != null ? cfdi.getFolio() : "",
                     "total",  cfdi.getTotal(),
                     "status", cfdi.getStatus(),
-                    "mensaje", "✅ CFDI timbrado correctamente"
+                    "mensaje", " CFDI timbrado correctamente"
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -119,8 +106,7 @@ public class CfdiController {
         }
     }
 
-    // ── Timbrar una pre-factura ──────────────────────────────────────────────
-    @Operation(summary = "Timbrar una pre-factura con CFDI 4.0 via FEL Premium")
+   @Operation(summary = "Timbrar una pre-factura con CFDI 4.0 via FEL Premium")
     @PostMapping("/timbrar/prefactura/{prefacturaId}")
     public ResponseEntity<?> timbrarPrefactura(@PathVariable Long prefacturaId) {
         try {
@@ -138,8 +124,7 @@ public class CfdiController {
         }
     }
 
-    // ── Cancelar un CFDI ────────────────────────────────────────────────────
-    @Operation(summary = "Cancelar un CFDI por UUID")
+   @Operation(summary = "Cancelar un CFDI por UUID")
     @PatchMapping("/cancelar/{uuid}")
     public ResponseEntity<?> cancelar(
             @PathVariable String uuid,
@@ -155,7 +140,6 @@ public class CfdiController {
         }
     }
 
-    // ── Ver CFDI de una venta ────────────────────────────────────────────────
     @Operation(summary = "Obtener el CFDI timbrado de una venta")
     @GetMapping("/venta/{saleId}")
     public ResponseEntity<?> porVenta(@PathVariable Long saleId) {
@@ -165,21 +149,18 @@ public class CfdiController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // ── Listar todos los vigentes ────────────────────────────────────────────
-    @Operation(summary = "Listar todos los CFDIs vigentes")
+   @Operation(summary = "Listar todos los CFDIs vigentes")
     @GetMapping("/vigentes")
     public List<CfdiTimbrado> vigentes() {
         return cfdiService.listarVigentes();
     }
 
-    // ── Listar TODOS (vigentes + cancelados) con detalles de venta ───────────
     @Operation(summary = "Listar todos los CFDIs con detalle completo")
     @GetMapping("/todos")
     public List<Map<String, Object>> todos() {
         return cfdiService.listarTodos();
     }
 
-    // ── Historial de una factura global: tickets incluidos y sus productos ──
     @Operation(summary = "Detalle de factura global — tickets que la integran con sus productos")
     @GetMapping("/global/{cfdiId}/tickets")
     public ResponseEntity<?> ticketsDeGlobal(@PathVariable Long cfdiId) {
@@ -191,7 +172,6 @@ public class CfdiController {
         }
     }
 
-    // ── Obtener el XML timbrado de un CFDI (ver/descargar) ───────────────────
     @Operation(summary = "Obtener el XML timbrado de un CFDI por UUID")
     @GetMapping(value = "/xml/{uuid}", produces = "application/xml")
     public ResponseEntity<?> xml(@PathVariable String uuid) {
