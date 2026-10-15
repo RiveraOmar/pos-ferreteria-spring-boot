@@ -24,14 +24,10 @@ public class SaleItem {
     @JoinColumn(name = "product_id")
     private Product product;
 
-    // ── Producto LIBRE: descripción capturada en caja ────────────────────
-    // Los libres usan el producto genérico (id -1, SKU "LIBRE"); sin este
-    // campo, la descripción real ("Manguera 1/2") se perdía y el ticket,
-    // el historial y las facturas mostraban solo "LIBRE".
+    
     @Column(name = "custom_name", length = 200)
     private String customName;
 
-    // BigDecimal para soportar fracciones (metros, kg, gramos, litros...)
     @Column(precision = 10, scale = 3)
     private BigDecimal quantity;
 
@@ -40,9 +36,6 @@ public class SaleItem {
     private BigDecimal taxAmountPerUnit;
     private BigDecimal totalTaxItem;
 
-    // ── Trazabilidad por producto (libreta de fiado) ──
-    // Fecha en que se llevó ESTE producto (puede diferir de la fecha de la
-    // nota cuando se agregan productos después) y quién lo llevó.
     @Column(name = "added_at")
     private LocalDateTime addedAt;
 

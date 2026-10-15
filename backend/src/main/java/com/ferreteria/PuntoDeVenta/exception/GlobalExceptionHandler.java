@@ -102,7 +102,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
-    // Errores de validación (@Valid)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(
             MethodArgumentNotValidException ex, HttpServletRequest request) {
@@ -124,7 +123,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
-    // RuntimeException genérica (debe ir DESPUÉS de las específicas)
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<StockErrorResponse> handleRuntimeException(
             RuntimeException ex, HttpServletRequest request) {
@@ -136,7 +134,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
-    // Cualquier otro error no controlado (debe ir AL FINAL)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<StockErrorResponse> handleGeneral(
             Exception ex, HttpServletRequest request) {

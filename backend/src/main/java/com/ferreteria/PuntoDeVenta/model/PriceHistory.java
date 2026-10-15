@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "price_history")
 @Data
-@Builder // Útil para crear historiales rápidamente en el service
+@Builder 
 @NoArgsConstructor
 @AllArgsConstructor
 public class PriceHistory {
@@ -21,7 +21,7 @@ public class PriceHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY) // Lazy para mejor rendimiento
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
@@ -34,7 +34,6 @@ public class PriceHistory {
     @Column(name = "change_date", nullable = false)
     private LocalDateTime changeDate;
 
-    // Método que se ejecuta automáticamente antes de insertar
     @PrePersist
     protected void onCreate() {
         if (this.changeDate == null) {

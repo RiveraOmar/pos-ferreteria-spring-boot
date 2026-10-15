@@ -23,14 +23,11 @@ public class Sale {
     @Column(name = "invoice_number")
     private String invoiceNumber;
 
-    // ── Quién compró ──────────────────────────────────────
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Customer customer;
 
-    // ── Quién vendió (empleado) ───────────────────────────
-    // Por ahora lo dejamos como String simple hasta tener tabla de empleados
     @Column(name = "seller_name", length = 100)
     private String sellerName;
 
@@ -41,15 +38,15 @@ public class Sale {
     private BigDecimal taxAmount;
 
     @Column(name = "payment_method", length = 30)
-    private String paymentMethod; // EFECTIVO, TARJETA, TRANSFERENCIA
+    private String paymentMethod; 
 
     @Column(name = "amount_received", precision = 12, scale = 2)
-    private BigDecimal amountReceived; // cuánto pagó
+    private BigDecimal amountReceived; 
 
     @Column(name = "change_given", precision = 12, scale = 2)
-    private BigDecimal changeGiven; // cambio entregado
+    private BigDecimal changeGiven; 
 
-    private String status; // COMPLETED, CANCELLED
+    private String status; 
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -63,9 +60,7 @@ public class Sale {
     @Column(name = "incluido_factura_global")
     private Boolean incluidoFacturaGlobal = false;
 
-    // ── Trazabilidad: a QUÉ factura global pertenece esta venta ──────────
-    // Permite reconstruir la cadena: Factura Global → tickets → productos,
-    // que es el respaldo que pide el SAT en auditorías (guía CFDI global).
+   
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cfdi_global_id")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler",

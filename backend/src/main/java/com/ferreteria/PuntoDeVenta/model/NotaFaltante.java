@@ -4,12 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 
-/**
- * Una nota de la "libreta de apuntes" de Faltantes: algo que hace falta
- * pero que NO está dado de alta en el catálogo de productos — para
- * encargarlo a alguien, preguntarle a un proveedor, o simplemente no
- * olvidarlo. Texto libre, sin ligar a ningún producto.
- */
+
 @Entity
 @Table(name = "notas_faltantes")
 @Data

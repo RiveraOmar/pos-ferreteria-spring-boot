@@ -28,7 +28,7 @@ public class Prefactura {
     private String folio;
 
     @Column(nullable = false, length = 20)
-    private String status = "BORRADOR"; // BORRADOR, LISTA, EMITIDA, CANCELADA
+    private String status = "BORRADOR"; 
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotal = BigDecimal.ZERO;

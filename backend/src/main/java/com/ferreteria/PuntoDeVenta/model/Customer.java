@@ -42,7 +42,6 @@ public class Customer {
 
     private Boolean active;
 
-    // ── Datos fiscales SAT / CFDI ─────────────────────────────
     @Column(name = "razon_social", length = 300)
     private String razonSocial;
 
@@ -57,7 +56,6 @@ public class Customer {
 
     @Column(name = "sat_pais", length = 5)
     private String satPais;
-    // ─────────────────────────────────────────────────────────
 
     @OneToMany(mappedBy = "customer")
     @JsonIgnore

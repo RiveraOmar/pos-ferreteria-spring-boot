@@ -19,10 +19,10 @@ public class CatalogoBaterias {
     private String modelo;
 
     @Column(name = "anio_rango", nullable = false)
-    private String anioRango; // Almacena valores del PDF como "2013-2022" o "1992-2007"
+    private String anioRango; 
 
     @Column(name = "bateria_recomendada", nullable = false)
-    private String bateriaRecomendada; // Ej: "47", "75/86"
+    private String bateriaRecomendada; 
 
     @Column(name = "alt")
     private String bateriaAlternativa;

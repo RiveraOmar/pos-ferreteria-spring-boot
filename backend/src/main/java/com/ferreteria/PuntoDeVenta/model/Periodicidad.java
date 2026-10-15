@@ -1,12 +1,6 @@
 package com.ferreteria.PuntoDeVenta.model;
 
-/**
- * Periodicidad de la Factura Global (catálogo SAT c_Periodicidad).
- * Solo se exponen las 4 que un negocio de mostrador usaría normalmente;
- * el catálogo completo del SAT también tiene 05 Bimestral, que aquí no
- * se ofrece porque nadie la pidió — se puede agregar después igual que
- * las demás.
- */
+
 public enum Periodicidad {
 
     DIARIA  ("D", "01", "Diaria",    "1 factura cada día",         60),
@@ -14,11 +8,11 @@ public enum Periodicidad {
     QUINCENAL("Q","03", "Quincenal", "2 facturas al mes",          24),
     MENSUAL ("M", "04", "Mensual",   "1 factura al mes",           12);
 
-    private final String letra;         // prefijo usado en el string del periodo: "D:2026-08-29"
-    private final String codigoSat;     // catálogo c_Periodicidad
-    private final String nombre;        // para mostrar en el front
-    private final String descripcion;   // subtítulo en la tarjeta
-    private final int ventanaRezagados; // cuántos periodos hacia atrás se revisan por rezagados
+    private final String letra;         
+    private final String codigoSat;     
+    private final String nombre;       
+    private final String descripcion;   
+    private final int ventanaRezagados;
 
     Periodicidad(String letra, String codigoSat, String nombre,
                  String descripcion, int ventanaRezagados) {

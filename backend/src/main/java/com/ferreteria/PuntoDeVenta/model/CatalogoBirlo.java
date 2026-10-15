@@ -4,27 +4,26 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
 
-/** Especificación de un birlo del catálogo Internacionales León. */
 @Entity
 @Table(name = "catalogo_birlos")
 @Data
 public class CatalogoBirlo {
 
     @Id
-    private String codigo;                 // BR20-069RP
+    private String codigo;                 
 
-    private String tipo;                   // E = Estría, H = Hombro
-    private String lado;                   // R = Derecho, L = Izquierdo
+    private String tipo;                   
+    private String lado;                   
 
     @Column(name = "estria_pulg")
-    private BigDecimal estriaPulg;         // Ø de estría en pulgadas
+    private BigDecimal estriaPulg;         
 
     @Column(name = "estria_mm")
-    private BigDecimal estriaMm;           // Ø de estría en milímetros
+    private BigDecimal estriaMm;           
 
-    private String rosca;                  // 'M12 x 1.5' o '1/2"-20 hilos'
-    private String largo;                  // '45.50 mm' o '1.968"'
-    private String medida;                 // texto completo del catálogo
+    private String rosca;                 
+    private String largo;                  
+    private String medida;                 
 
     @Column(name = "pagina_catalogo")
     private Integer paginaCatalogo;

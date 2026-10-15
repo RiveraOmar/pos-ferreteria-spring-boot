@@ -20,7 +20,6 @@ public class Inventory {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    // BigDecimal para soportar stock fraccionario (metros, kg, etc.)
     @Column(name = "stock_actual", nullable = false, precision = 10, scale = 3)
     private BigDecimal stockActual = BigDecimal.ZERO;
 
