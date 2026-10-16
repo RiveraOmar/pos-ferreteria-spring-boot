@@ -2,15 +2,7 @@ import { fetchAPI } from '../services/api.js';
 import { fmtFecha } from '../services/fechas.js';
 import { SearchSelect } from '../services/searchSelect.js';
 
-// Escapa un texto que va DENTRO de un onclick="...('AQUI')".
-// Ahi conviven dos lenguajes y cada uno tiene su comilla: el atributo HTML
-// esta delimitado por " y la cadena de JavaScript por '. Por eso hay que
-// escapar para LOS DOS, en este orden:
-//   1. la barra invertida, o los escapes de abajo se rompen entre si
-//   2. la comilla simple, con \' — es escape de JAVASCRIPT
-//   3. y hasta el final el HTML: & " < >
-// La comilla simple NO se convierte a &#39; a proposito: el navegador la
-// decodificaria de vuelta a ' y cerraria la cadena de JS a media instruccion.
+
 function escAttr(s) {
     return String(s ?? '')
         .replace(/\\/g, '\\\\')
@@ -208,7 +200,6 @@ export async function initProveedores(container) {
     cargarProveedores();
 }
 
-// ─── SELECCIÓN MÚLTIPLE — desactivar varios proveedores de un jalón ──────────
 function configurarSeleccionMultipleProveedores() {
     const tabla = document.getElementById('tabla-proveedores-body');
     const barra = document.getElementById('prov-barra-seleccion');
@@ -250,7 +241,6 @@ function configurarSeleccionMultipleProveedores() {
     });
 }
 
-// ─── CARGAR / BUSCAR ──────────────────────────────────────────────────────────
 async function cargarProveedores() {
     const tbody = document.getElementById('tabla-proveedores-body');
     tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5">
@@ -339,7 +329,6 @@ function renderTabla(proveedores) {
         </tr>`).join('');
 }
 
-// ─── ABRIR MODAL ──────────────────────────────────────────────────────────────
 async function abrirModal(id = null) {
     document.getElementById('form-proveedor').reset();
     limpiarValidaciones('form-proveedor');
@@ -366,7 +355,6 @@ async function abrirModal(id = null) {
     proveedorModalBS.show();
 }
 
-// ─── GUARDAR ──────────────────────────────────────────────────────────────────
 async function guardarProveedor(e) {
     e.preventDefault();
     limpiarValidaciones('form-proveedor');
@@ -405,7 +393,6 @@ async function guardarProveedor(e) {
           })
         : true;
 
-    // RFC: igual que en clientes, valida formato de persona física o moral del SAT
     const rfcVal = document.getElementById('prov-rfc').value.trim();
     const rfcOk  = rfcVal ? validarRFC('prov-rfc', false) : true;
 
@@ -454,13 +441,6 @@ async function guardarProveedor(e) {
     }
 }
 
-// ─── ACCIONES GLOBALES ────────────────────────────────────────────────────────
-// ══════════════════════════════════════════════════════════════════════════════
-// FICHA DE INSPECCIÓN DEL PROVEEDOR
-// Todo lo que necesitas saber antes de llamarle: sus datos, cuánto le compras,
-// qué te surte y a qué costo. Una sola llamada a cada endpoint, en paralelo.
-// ══════════════════════════════════════════════════════════════════════════════
-
 const filaDatoProv = (etiqueta, valor) => `
     <div class="d-flex justify-content-between border-bottom py-1">
         <span class="text-muted small">${etiqueta}</span>
@@ -486,7 +466,6 @@ window.verFichaProveedor = async (id) => {
                 new Date(a.createdAt) > new Date(b.createdAt) ? a : b)
             : null;
 
-        // Días desde la última compra: ayuda a ver a quién hace mucho no le compras
         let diasSinComprar = null;
         if (ultima) {
             diasSinComprar = Math.floor(

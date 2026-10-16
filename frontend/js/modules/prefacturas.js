@@ -157,19 +157,17 @@ export function initPrefacturas(container) {
     cargarClientesModal();
 }
 
-// ─── ESTADO LOCAL ─────────────────────────────────────────────────────────────
 let itemsModal      = [];
 let editandoPreId   = null;
 let modalBS         = null;
-let ssClienteModal  = null; // SearchSelect del modal
-let clientesCache   = [];   // cache de clientes para reusar
+let ssClienteModal  = null; 
+let clientesCache   = [];   
 
 function getModal() {
     if (!modalBS) modalBS = new bootstrap.Modal(document.getElementById('prefacturaModal'));
     return modalBS;
 }
 
-// ─── CARGAR CLIENTES Y MONTAR SearchSelect DEL MODAL ─────────────────────────
 async function cargarClientesModal() {
     try {
         clientesCache = await fetchAPI('/customers?active=true');
@@ -190,12 +188,10 @@ async function cargarClientesModal() {
     } catch (e) { console.error('Error cargando clientes:', e); }
 }
 
-// ─── ABRIR MODAL ─────────────────────────────────────────────────────────────
 async function abrirModal(prefactura = null) {
     itemsModal    = [];
     editandoPreId = null;
 
-    // Limpiar cliente
     document.getElementById('pre-cliente-id').value = '';
     if (ssClienteModal) ssClienteModal.clear();
     document.getElementById('pre-notas').value = '';
@@ -207,7 +203,6 @@ async function abrirModal(prefactura = null) {
     if (prefactura) {
         editandoPreId = prefactura.id;
         document.getElementById('pre-cliente-id').value = prefactura.customerId;
-        // Mostrar nombre del cliente en el input
         if (ssClienteModal) ssClienteModal.setValue(prefactura.customerId);
         document.getElementById('pre-notas').value = prefactura.notes || '';
         itemsModal = prefactura.items.map(i => ({
@@ -229,12 +224,10 @@ async function abrirModal(prefactura = null) {
     getModal().show();
 }
 
-// ─── BUSCADOR DE PRODUCTOS CON SearchSelect ───────────────────────────────────
 function iniciarBuscadorProductos() {
     const input    = document.getElementById('pre-buscar-prod');
     const dropdown = document.getElementById('pre-resultados-prod');
 
-    // Limpiar listeners previos clonando el nodo
     const newInput = input.cloneNode(true);
     input.parentNode.replaceChild(newInput, input);
 
@@ -302,7 +295,6 @@ function iniciarBuscadorProductos() {
     }, { once: false });
 }
 
-// ─── AGREGAR PRODUCTO ─────────────────────────────────────────────────────────
 window._preAgregarProducto = (id, nombre, sku, precio, stock) => {
     if (stock <= 0) return;
     const existe = itemsModal.find(i => i.productId === id);
@@ -322,7 +314,6 @@ window._preAgregarProducto = (id, nombre, sku, precio, stock) => {
     document.getElementById('pre-resultados-prod').classList.remove('show');
     document.getElementById('pre-buscar-prod').value = '';
 
-    // Toast de confirmación
     const t = document.createElement('div');
     t.style.cssText = `position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;
         background:#16a34a;color:white;padding:.5rem 1rem;border-radius:8px;
@@ -332,7 +323,6 @@ window._preAgregarProducto = (id, nombre, sku, precio, stock) => {
     setTimeout(() => t.remove(), 1800);
 };
 
-// ─── RENDER ITEMS ─────────────────────────────────────────────────────────────
 function renderItemsModal() {
     const tbody = document.getElementById('pre-items-body');
     if (!itemsModal.length) {
@@ -402,7 +392,6 @@ function actualizarTotalesModal() {
     document.getElementById('pre-total').textContent    = `$${totalConIva.toFixed(2)}`;
 }
 
-// ─── GUARDAR ──────────────────────────────────────────────────────────────────
 async function guardarPrefactura(statusFinal) {
     const clienteId = document.getElementById('pre-cliente-id').value;
     if (!clienteId) return Swal.fire('Aviso', 'Selecciona un cliente.', 'warning');
@@ -443,7 +432,6 @@ async function guardarPrefactura(statusFinal) {
     }
 }
 
-// ─── VISTA ACTIVAS ────────────────────────────────────────────────────────────
 async function renderActivas(container) {
     container.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>`;
     try {
@@ -501,7 +489,6 @@ async function renderActivas(container) {
     }
 }
 
-// ─── FILA PRE-FACTURA ─────────────────────────────────────────────────────────
 function filaPreFactura(p) {
     const statusBadge = {
         BORRADOR: `<span class="badge bg-secondary">Borrador</span>`,
@@ -540,7 +527,6 @@ function filaPreFactura(p) {
     </tr>`;
 }
 
-// ─── VISTA POR CLIENTE con SearchSelect ──────────────────────────────────────
 async function renderPorCliente(container) {
     container.innerHTML = `
         <div class="card shadow-sm border-0 mb-3">
@@ -558,7 +544,6 @@ async function renderPorCliente(container) {
         <div id="resultado-pre-cliente"></div>`;
 
     try {
-        // Reusar el cache si ya está cargado
         const clientes = clientesCache.length
             ? clientesCache
             : await fetchAPI('/customers?active=true');
@@ -664,7 +649,6 @@ async function renderPorCliente(container) {
     } catch (e) { console.error(e); }
 }
 
-// ─── ACCIONES GLOBALES ────────────────────────────────────────────────────────
 window.editarPrefactura = async (id) => {
     try { abrirModal(await fetchAPI(`/prefacturas/${id}`)); }
     catch (e) { Swal.fire('Error', e.message, 'error'); }

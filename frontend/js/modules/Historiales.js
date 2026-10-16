@@ -1,12 +1,4 @@
-// ═════════════════════════════════════════════════════════════════════════════
-//  HISTORIALES — un solo lugar para toda la historia del negocio
-//
-//  Pestañas:
-//    · Ventas    → reutiliza el módulo historial.js existente (sin duplicar)
-//    · Compras   → vista NUEVA: órdenes de compra con filtros y detalle
-//    · Facturas  → reutiliza facturacion.js (con sus pestañas Vigentes /
-//                  Cancelados y el buscador de auditoría)
-// ═════════════════════════════════════════════════════════════════════════════
+
 import { fetchAPI }        from '../services/api.js';
 import { initHistorial }   from './historial.js';
 import { initFacturacion } from './facturacion.js';
@@ -48,12 +40,6 @@ function abrirTab(cual, contenido) {
     initHistorialCompras(contenido);
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-//  HISTORIAL DE COMPRAS
-//  Filtros: texto (proveedor, folio, factura del proveedor, producto),
-//  rango de fechas y estado. Cada compra se expande para ver sus renglones.
-//  Incluye resumen (cuántas y cuánto suman) para revisiones/auditoría.
-// ═════════════════════════════════════════════════════════════════════════════
 let comprasCache = null;
 
 function initHistorialCompras(container) {
@@ -118,7 +104,6 @@ function initHistorialCompras(container) {
 
 async function cargarCompras() {
     try {
-        // Sin filtros de fecha el backend regresa todo el historial
         comprasCache = await fetchAPI('/purchase-orders/search');
         renderCompras();
     } catch (e) {
@@ -150,7 +135,6 @@ function renderCompras() {
         });
     }
 
-    // Resumen para revisiones: cuántas compras y cuánto suman
     const res = document.getElementById('comp-resumen');
     const suma = lista.reduce((s, c) => s + Number(c.total || 0), 0);
     res.innerHTML = (q || desde || hasta || estado)

@@ -11,9 +11,6 @@ import { LIMITE_EFECTIVO, procesarVentaDividida, procesarDeudaEnNotas }
     from '../services/facturaDividida.js';
 
 
-// ─── TEMA "MOSTRADOR AZ" (azul + carbón, estilo refaccionaria) ───────────────
-// Se inyecta una sola vez; todo va con prefijo .pos-az para no tocar
-// los demás módulos.
 function inyectarTemaPos() {
     if (document.getElementById('pos-az-theme')) return;
     if (!document.getElementById('pos-az-font')) {
@@ -140,13 +137,6 @@ function inyectarTemaPos() {
 }
 
 
-// ─── COSTO CIFRADO ───────────────────────────────────────────────────────────
-// El costo llega YA CIFRADO desde el backend en el campo `costCode`
-// (Util/PriceEncoder.java: clave MEXICANOS, M=1...S=9, y el 0 es una letra
-// ALEATORIA fuera de la clave para que no se detecten patrones).
-// El frontend solo lo muestra; no cifra nada. "0000" = producto sin costo.
-
-// ─── MAPA SAT → decimales (mismo que productos.js) ───────────────────────────
 const UNIDADES_DECIMALES = new Set([
     'MTR','KGM','GRM','LTR','MLT','CMT','MTK','DMT',
     'DMQ','HLT','TNE','MGM','H87P'
@@ -164,20 +154,17 @@ function etiqueta(clave) {
     return ETIQUETA_UNIDAD[(clave||'').toUpperCase()] || 'pza';
 }
 
-// ─── ESTADO ───────────────────────────────────────────────────────────────────
 let carrito             = [];
-let topVendidos         = [];  // productos más vendidos (precarga del buscador)
-let catalogoCompleto    = [];  // catálogo para el buscador por medidas
-let _catalogoAt        = 0;    // timestamp de la última carga
-const CATALOGO_VIGENCIA= 10*60*1000; // 10 minutos
+let topVendidos         = [];  
+let catalogoCompleto    = [];  
+let _catalogoAt        = 0;    
+const CATALOGO_VIGENCIA= 10*60*1000; 
 
-// Productos.js llama esto cuando activa/desactiva un producto, para que
-// la próxima búsqueda en Ventas pida el catálogo fresco desde el backend.
 window._invalidarCatalogoVentas = () => {
-    _catalogoAt = 0;          // forzar recarga en la próxima entrada
-    catalogoCompleto = [];    // limpiar el buscador "Por medidas" también
+    _catalogoAt = 0;          
+    catalogoCompleto = [];    
 };
-let descuentoCliente    = 0;   // % de descuento del cliente seleccionado
+let descuentoCliente    = 0;   
 let clienteSeleccionado = null;
 let ssCliente           = null;
 
@@ -331,31 +318,24 @@ export function initVentas(container) {
 
     configurarEventos();
     cargarClientes();
-    cargarTopVendidos();  // precarga de más vendidos en el buscador
+    cargarTopVendidos();  
 
-    // ── FIX: el carrito vive a nivel de módulo y sobrevive la navegación,
-    // pero al volver aquí el HTML se pintaba vacío y los productos "aparecían"
-    // hasta agregar uno más. Se re-dibuja lo que ya traía.
     if (carrito.length) actualizarVistaCarrito();
 
-    // ── UX: llegar a Ventas con el cursor listo para buscar el producto
     setTimeout(() =>
         document.getElementById('input-buscar-producto-venta')?.focus(), 50);
 
-    // ── UX: aviso del navegador si intentas cerrar/recargar con carrito lleno
-    // (una venta a medias se perdía en silencio). Se registra una sola vez.
     if (!window.__ventasBeforeUnload) {
         window.__ventasBeforeUnload = true;
         window.addEventListener('beforeunload', (e) => {
             if (carrito.length > 0) {
                 e.preventDefault();
-                e.returnValue = ''; // requerido por Chrome para mostrar el aviso
+                e.returnValue = ''; 
             }
         });
     }
 }
 
-// ─── EVENTOS ──────────────────────────────────────────────────────────────────
 function configurarEventos() {
     const inputBuscar = document.getElementById('input-buscar-producto-venta');
     let timeout;
@@ -369,7 +349,6 @@ function configurarEventos() {
         if (e.key === 'Enter') {
             clearTimeout(timeout);
             const v = e.target.value.trim();
-            // true = si hay un único resultado con stock, agregarlo directo
             if (v) buscarProductos(v, true);
         }
         if (e.key === 'Escape') {
@@ -378,11 +357,7 @@ function configurarEventos() {
         }
     });
 
-    // Buscador de Código Truper — MISMA función de búsqueda que el general
-    // (el backend ya reconoce solo un código de 4-10 dígitos y lo busca
-    // primero por Truper); aquí solo cambia dónde escribe el vendedor,
-    // para que sea explícito y no tenga que adivinar en qué caja tecleaba.
-    const inputTruper = document.getElementById('input-buscar-truper');
+   const inputTruper = document.getElementById('input-buscar-truper');
     let timeoutTruper;
     inputTruper.addEventListener('input', e => {
         clearTimeout(timeoutTruper);
@@ -412,10 +387,6 @@ function configurarEventos() {
         .addEventListener('click', guardarComoPrefactura);
 }
 
-// ─── PESTAÑAS DEL BUSCADOR (General / Código Truper / Por medidas) ───────────
-// Solo una caja de búsqueda visible a la vez — así el vendedor nunca duda
-// dónde escribir según lo que trae el cliente (nombre, código impreso del
-// catálogo Truper, o una medida tomada con el vernier).
 function configurarPestanasBuscador() {
     document.querySelectorAll('#buscador-tabs [data-tab-buscar]').forEach(btn => {
         btn.addEventListener('click', () => activarPestanaBuscador(btn.dataset.tabBuscar));
@@ -433,8 +404,6 @@ function activarPestanaBuscador(tab) {
     document.getElementById('buscador-panel-medidas').style.display =
         tab === 'medidas' ? '' : 'none';
 
-    // Al cambiar de pestaña se limpia la que se deja atrás, para no dejar
-    // resultados de una búsqueda vieja confundidos con la nueva pestaña.
     if (tab !== 'general') document.getElementById('input-buscar-producto-venta').value = '';
     if (tab !== 'truper')  document.getElementById('input-buscar-truper').value = '';
     if (tab !== 'medidas') {
@@ -443,7 +412,6 @@ function activarPestanaBuscador(tab) {
     }
     resetTablaProductos();
 
-    // Foco automático en la caja de la pestaña recién elegida
     setTimeout(() => {
         if (tab === 'general') document.getElementById('input-buscar-producto-venta').focus();
         if (tab === 'truper')  document.getElementById('input-buscar-truper').focus();
@@ -454,8 +422,6 @@ function activarPestanaBuscador(tab) {
 function resetTablaProductos() {
     const tbody = document.getElementById('tabla-resultados-productos');
     if (!tbody) return;
-    // Con el buscador vacío se precargan los productos MÁS VENDIDOS:
-    // lo de cajón queda a un clic, sin teclear nada.
     if (topVendidos.length) {
         tbody.innerHTML = `
             <div style="grid-column:1/-1" class="pb-1">
@@ -474,12 +440,7 @@ function resetTablaProductos() {
     }
 }
 
-// Los más vendidos se calculan de las ventas RECIENTES reales (últimas 50),
-// no de una lista fija: si cambia lo que se vende, cambia la precarga.
 async function cargarTopVendidos() {
-    // Si el catálogo es reciente (< 10 min) y ya está cargado, no lo vuelve
-    // a pedir — son varios MB con Truper. Se invalida desde productos.js
-    // cuando el usuario activa o desactiva un producto.
     const fresco = catalogoCompleto.length > 0
         && (Date.now() - _catalogoAt) < CATALOGO_VIGENCIA;
     if (fresco) { resetTablaProductos(); return; }
@@ -506,12 +467,10 @@ async function cargarTopVendidos() {
             .filter(p => p && p.active !== false)
             .slice(0, 12);
     } catch (e) { topVendidos = []; }
-    // Pintar solo si el usuario no está a media búsqueda
     const inp = document.getElementById('input-buscar-producto-venta');
     if (inp && !inp.value.trim()) resetTablaProductos();
 }
 
-// ─── CLIENTES ─────────────────────────────────────────────────────────────────
 async function cargarClientes() {
     try {
         const clientes = await fetchAPI('/customers?active=true');
@@ -528,7 +487,7 @@ async function cargarClientes() {
             onSelect: item => {
                 clienteSeleccionado = item.id;
                 descuentoCliente = item.descuento || 0;
-                actualizarVistaCarrito();  // re-aplicar total con descuento
+                actualizarVistaCarrito();  
                 if (descuentoCliente > 0) {
                     mostrarToast(`Descuento de ${descuentoCliente}% aplicado a ${item.label}`);
                 }
@@ -546,9 +505,6 @@ async function cargarClientes() {
     } catch (e) { console.error(e); }
 }
 
-
-// Fila de producto del buscador de Ventas (compartida entre la búsqueda
-// y la precarga de más vendidos)
 function filaProductoVenta(p) {
     if (p.locationRack) {
         window._ubicacionesProd = window._ubicacionesProd || {};
@@ -563,7 +519,6 @@ function filaProductoVenta(p) {
     const dec = esDecimal(p.satClaveUnidad);
     const etq = etiqueta(p.satClaveUnidad);
     const stockVal = parseFloat(p.currentStock) || 0;
-    // Precio estilo etiqueta de anaquel: pesos grandes, centavos elevados
     const precio = p.price || 0;
     const pesos  = Math.floor(precio);
     const cents  = Math.round((precio - pesos) * 100)
@@ -652,24 +607,16 @@ function filaProductoVenta(p) {
 }
 
 
-// ─── BÚSQUEDA POR MEDIDAS (baleros, birlos, tornillería) ─────────────────────
-// El cliente llega con medidas, no con nombres: "un balero 25×52×15".
-// Se elige el tipo, se llenan las medidas conocidas (todas opcionales) y
-// el grid muestra los productos cuyos ATRIBUTOS coinciden. La comparación
-// es tolerante: "25" encuentra "25 mm", "1/2" encuentra la pulgada.
 function configurarBusquedaPorMedidas() {
     const selTipo= document.getElementById('medidas-tipo');
     const cont   = document.getElementById('medidas-campos');
 
-    // Poblar tipos desde la fuente compartida (mismos que el catálogo)
     Object.entries(PLANTILLAS_MEDIDAS).forEach(([id, tpl]) => {
         const o = document.createElement('option');
         o.value = id; o.textContent = tpl.etiqueta;
         selTipo.appendChild(o);
     });
-    // El mostrar/ocultar este panel ahora lo maneja la pestaña "Por medidas"
-    // (ver activarPestanaBuscador) — aquí solo queda la lógica de llenar
-    // los campos según el tipo elegido.
+   
 
     selTipo.addEventListener('change', () => {
         cont.innerHTML = '';
@@ -686,7 +633,7 @@ function configurarBusquedaPorMedidas() {
             inp.addEventListener('input', filtrarPorMedidas);
             cont.appendChild(inp);
         });
-        filtrarPorMedidas();   // sin medidas aún: muestra todos los del tipo
+        filtrarPorMedidas();   
         cont.querySelector('input')?.focus();
     });
 }
@@ -706,12 +653,9 @@ function filtrarPorMedidas() {
 
     for (const p of catalogoCompleto) {
         const attrs = p.attributes || {};
-        // Debe "ser del tipo": tener al menos un campo de la plantilla
         if (!clavesTipo.some(k => k in attrs)) continue;
 
-        // Evaluar TODAS las medidas capturadas. Cada una puede salir
-        // 'exacta', 'aprox' (dentro de ±8%, con fracciones y pulg↔mm)
-        // o null (no coincide → el producto queda fuera).
+        
         let nivel = 'exacta';
         let cumple = true;
         for (const c of criterios) {
@@ -745,7 +689,6 @@ function filtrarPorMedidas() {
                 'bi-rulers', '#B26A00', aproximadas);
 }
 
-// ─── BÚSQUEDA DE PRODUCTOS ────────────────────────────────────────────────────
 async function buscarProductos(termino, autoAgregar = false) {
     const tbody = document.getElementById('tabla-resultados-productos');
     tbody.innerHTML = `<div class="az-empty" style="grid-column:1/-1">
@@ -761,9 +704,7 @@ async function buscarProductos(termino, autoAgregar = false) {
             return;
         }
 
-        // Enter con UN solo resultado con stock → se agrega directo al carrito
-        // y se limpia la búsqueda. Flujo perfecto para LECTOR DE CÓDIGO DE
-        // BARRAS: escanear SKU → Enter → agregado, sin tocar el mouse.
+        
         if (autoAgregar && productos.length === 1) {
             const p = productos[0];
             const stockVal = parseFloat(p.currentStock) || 0;
@@ -786,14 +727,12 @@ async function buscarProductos(termino, autoAgregar = false) {
     }
 }
 
-// ─── AGREGAR AL CARRITO ───────────────────────────────────────────────────────
 window.verFichaProductoVenta = (id) => mostrarFichaProducto(id);
 
 window.agregarAlCarrito = (id, nombre, precio, stock,
                            imagenUrl, dec, claveSat) => {
     const existe = carrito.find(i => i.id === id);
     if (existe) {
-        // Para fraccionables, +0.5 (o +100 para g/mL); para enteros, +1
         const paso = dec
             ? (['GRM','MGM','MLT'].includes((claveSat||'').toUpperCase())
                 ? 0.1 : 0.5)
@@ -817,7 +756,7 @@ window.agregarAlCarrito = (id, nombre, precio, stock,
             ubicacion: window._ubicacionesProd?.[id] || null
         });
     }
-    ultimoItemAgregado = id;   // para los atajos + / − y el Deshacer
+    ultimoItemAgregado = id;   
     actualizarVistaCarrito();
     mostrarToast(nombre, {
         texto: 'Deshacer',
@@ -825,10 +764,7 @@ window.agregarAlCarrito = (id, nombre, precio, stock,
     });
 };
 
-// ─── VENDER BOLSA COMPLETA ───────────────────────────────────────────────────
-// La bolsa es un renglón propio en el carrito (id distinto: "id-bolsa") con su
-// precio especial. Para el inventario cuenta como N PIEZAS: por eso guardamos
-// piezasEquiv, y al cobrar el backend descuenta la cantidad real de piezas.
+
 window.agregarBolsaAlCarrito = (id, nombre, precioBolsa, piezasPorBolsa,
                                 stock, imagenUrl, claveSat) => {
     const idBolsa = id + '-bolsa';
@@ -853,7 +789,7 @@ window.agregarBolsaAlCarrito = (id, nombre, precioBolsa, piezasPorBolsa,
             imagenUrl: imagenUrl || null, esDecimal: false,
             claveSat: claveSat || 'H87',
             ubicacion: window._ubicacionesProd?.[id] || null,
-            esBolsa: true, piezasEquiv: piezasPorBolsa   // clave para el inventario
+            esBolsa: true, piezasEquiv: piezasPorBolsa  
         });
     }
     ultimoItemAgregado = idBolsa;
@@ -864,7 +800,6 @@ window.agregarBolsaAlCarrito = (id, nombre, precioBolsa, piezasPorBolsa,
     });
 };
 
-// ─── AJUSTAR CANTIDAD (botones + / -) ─────────────────────────────────────────
 window.ajustarCantidadCarrito = (id, inc) => {
     const item = carrito.find(i => i.id === id);
     if (!item) return;
@@ -886,7 +821,6 @@ window.ajustarCantidadCarrito = (id, inc) => {
     actualizarVistaCarrito();
 };
 
-// ─── EDITAR CANTIDAD DIRECTAMENTE EN EL INPUT ─────────────────────────────────
 window.editarCantidadCarrito = (id, val) => {
     const item  = carrito.find(i => i.id === id);
     if (!item) return;
@@ -916,7 +850,6 @@ window.eliminarDelCarrito = id => {
     actualizarVistaCarrito();
 };
 
-// ─── VACIAR CARRITO COMPLETO ──────────────────────────────────────────────────
 async function vaciarCarrito() {
     if (!carrito.length) return;
     const r = await Swal.fire({
@@ -932,7 +865,6 @@ async function vaciarCarrito() {
     actualizarVistaCarrito();
 }
 
-// ─── EDITAR PRECIO EN CARRITO ─────────────────────────────────────────────────
 window.editarPrecioCarrito = async id => {
     const item = carrito.find(i => i.id === id);
     if (!item) return;
@@ -969,7 +901,6 @@ window.editarPrecioCarrito = async id => {
     actualizarVistaCarrito();
 };
 
-// ─── VISTA CARRITO ────────────────────────────────────────────────────────────
 function actualizarVistaCarrito() {
     const lista    = document.getElementById('lista-carrito');
     const header   = document.getElementById('total-header');
@@ -1066,11 +997,7 @@ function actualizarVistaCarrito() {
             </div>
         </div>`; }).join('');
 
-    // ── Descuento del cliente ────────────────────────────────────────────────
-    // Se calcula IGUAL que en el backend: se descuenta el precio unitario, se
-    // redondea a centavos y luego se multiplica por la cantidad. Si aquí se
-    // descontara el total de un jalón, la pantalla podría diferir del cobro
-    // real por uno o dos centavos en productos de precio quebrado.
+    
     let totalFinal = totalConIva;
     if (descuentoCliente > 0) {
         const factor = 1 - (descuentoCliente / 100);
@@ -1090,7 +1017,6 @@ function actualizarVistaCarrito() {
         itemsHdr.innerText = `${carrito.length} producto(s) en el carrito`;
     }
 
-    // Mostrar la línea de descuento solo cuando aplica
     let filaDesc = document.getElementById('resumen-descuento-fila');
     if (descuentoCliente > 0) {
         if (!filaDesc) {
@@ -1107,27 +1033,19 @@ function actualizarVistaCarrito() {
     }
 }
 
-// Toast breve en la esquina (avisos no intrusivos)
 
-// ─── ATAJOS DE TECLADO DEL MOSTRADOR ─────────────────────────────────────────
-//  F1  → foco al buscador (desde cualquier parte de la pantalla)
-//  F2  → cobrar la venta
-//  F4  → producto libre
-//  + / − → ajustar cantidad del ÚLTIMO producto agregado (fuera de inputs)
-//  Esc → cierra modales (lo maneja SweetAlert)
 let ultimoItemAgregado = null;
 
 function instalarAtajosVentas() {
     if (window._atajosVentas) document.removeEventListener('keydown', window._atajosVentas);
     window._atajosVentas = (e) => {
-        // Solo cuando la vista de ventas está en pantalla
         if (!document.getElementById('input-buscar-producto-venta')) return;
         const enInput = ['INPUT', 'TEXTAREA', 'SELECT']
             .includes(document.activeElement?.tagName);
         const hayModal = document.querySelector('.swal2-container');
 
         if (e.key === 'F1') {
-            e.preventDefault();   // F1 abre la ayuda del navegador: bloquear
+            e.preventDefault();  
             if (!hayModal) {
                 const inp = document.getElementById('input-buscar-producto-venta');
                 inp.focus(); inp.select();
@@ -1165,7 +1083,6 @@ function mostrarToast(msg, accion) {
     setTimeout(() => t.remove(), accion ? 4000 : 2200);
 }
 
-// ─── PRODUCTO LIBRE ───────────────────────────────────────────────────────────
 async function agregarProductoLibre() {
     const r = await Swal.fire({
         title:'Producto Libre',
@@ -1207,8 +1124,7 @@ async function agregarProductoLibre() {
                     min="1" step="1" value="1">
             </div>`,
         didOpen: () => {
-            // La unidad controla el paso del input: pieza = enteros,
-            // fraccionable = milésimas (2.5 m, 0.750 kg...)
+            
             const sel  = document.getElementById('libre-unidad');
             const cant = document.getElementById('libre-cantidad');
             sel.addEventListener('change', () => {
@@ -1268,8 +1184,8 @@ async function agregarProductoLibre() {
             cantidad, subtotal:parseFloat((precio*cantidad).toFixed(2)),
             stockMax:99999, esLibre:true, customPrice:precio,
             imagenUrl:null,
-            esDecimal:unidad !== 'H87',   // pieza = enteros; resto fraccionable
-            claveSat:unidad               // etiqueta correcta: /m, /kg, /L...
+            esDecimal:unidad !== 'H87',   
+            claveSat:unidad               
         });
     }
     ultimoItemAgregado = existe ? existe.id : idTmp;
@@ -1280,7 +1196,6 @@ async function agregarProductoLibre() {
     });
 }
 
-// ─── GUARDAR COMO PRE-FACTURA ─────────────────────────────────────────────────
 async function guardarComoPrefactura() {
     if (!carrito.length) return;
     if (!clienteSeleccionado) {
@@ -1398,7 +1313,6 @@ async function guardarComoPrefactura() {
     }
 }
 
-// ─── PROCESAR VENTA ───────────────────────────────────────────────────────────
 async function procesarVenta() {
     if (!carrito.length) return;
     if (!clienteSeleccionado) {
@@ -1548,18 +1462,14 @@ async function procesarVenta() {
     if (!pagoResult.isConfirmed) return;
     const { recibido, metodo } = pagoResult.value;
 
-    // ── REGLA DEL NEGOCIO: efectivo >= $2,000 se ofrece dividir en varias
-    // ventas menores a $2,000 (una factura deducible c/u). Tarjeta y
-    // transferencia no tienen límite.
     if (metodo === 'EFECTIVO' && totalNum >= LIMITE_EFECTIVO) {
         const resultado = await procesarVentaDividida(
             carrito, clienteSeleccionado, recibido, totalNum);
         if (resultado === 'CANCELADO') return;
-        if (Array.isArray(resultado)) {   // ya se crearon las N ventas
+        if (Array.isArray(resultado)) {   
             limpiarVenta();
             return;
         }
-        // resultado === 'UNA_SOLA' → sigue el flujo normal
     }
 
     await ejecutarVenta(recibido, recibido - totalNum, metodo);
@@ -1571,9 +1481,7 @@ async function ejecutarVenta(montoRecibido, cambio, metodoPago) {
         paymentMethod:  metodoPago,
         amountReceived: montoRecibido,
         items: carrito.map(i => {
-            // BOLSA: el inventario se descuenta en PIEZAS. Se envía la
-            // cantidad real de piezas y el precio por pieza prorrateado
-            // (precio de bolsa ÷ piezas) para que el total cuadre exacto.
+            
             if (i.esBolsa) {
                 const piezas = i.cantidad * i.piezasEquiv;
                 return {
@@ -1614,7 +1522,6 @@ async function ejecutarVenta(montoRecibido, cambio, metodoPago) {
 function mostrarTicket(venta, montoRecibido, cambio) {
     const fecha = fmtFecha(venta.createdAt);
 
-    // Mapeo con el diseño optimizado en 2 filas (Nombre arriba / Cantidad x P.U. y Total abajo)
     const items = venta.items.map(i => {
         const cantFmt = parseFloat(i.quantity) % 1 === 0
             ? parseInt(i.quantity)
@@ -1623,7 +1530,6 @@ function mostrarTicket(venta, montoRecibido, cambio) {
         const totalItem = (parseFloat(i.quantity) * Number(i.unitPrice)).toFixed(2);
         const puFmt = Number(i.unitPrice).toFixed(2);
 
-        // Borde inferior punteado más grueso y oscuro (2px dotted #000)
         return `
         <div class="item-producto" style="margin-bottom: 6px; padding-bottom: 4px; border-bottom: 2px dotted #000;">
             <div class="prod-nombre" style="font-weight: bold; text-transform: uppercase;">${i.productName}</div>
@@ -1858,10 +1764,7 @@ async function registrarComoDeuda() {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
     try {
-        // ── REGLA DEL NEGOCIO: ninguna nota de fiado llega a $2,000 ──
-        // Los productos se reparten: primero rellenan notas pendientes del
-        // cliente que aún tengan espacio; lo que no cabe abre notas nuevas,
-        // cada una bajo el límite (así cada factura futura es deducible).
+        
         const resultado = await procesarDeudaEnNotas(
             carrito, clienteSeleccionado, nota, totalNum);
         if (resultado !== 'CANCELADO' && !resultado.error) limpiarVenta();
@@ -1883,8 +1786,6 @@ function limpiarVenta() {
     buscar.value = '';
     resetTablaProductos();
     actualizarVistaCarrito();
-    // UX de mostrador: cliente cobrado → cursor listo para la siguiente venta
     setTimeout(() => buscar.focus(), 100);
-    // Refrescar contadores del sidebar (stock pudo bajar, deuda pudo crearse)
     if (typeof window.refrescarBadges === 'function') window.refrescarBadges();
 }

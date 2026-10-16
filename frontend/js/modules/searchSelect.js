@@ -1,16 +1,4 @@
-/**
- * SearchSelect — reemplaza los <select> con búsqueda en tiempo real
- * Uso:
- *   const ss = new SearchSelect({
- *     input:       document.getElementById('mi-input'),
- *     dropdown:    document.getElementById('mi-dropdown'),
- *     items:       [{ id, label, sub, extra }],  // sub y extra son opcionales
- *     onSelect:    (item) => { ... },
- *     placeholder: 'Buscar cliente...'
- *   });
- *   ss.setItems(items);   // actualizar items dinámicamente
- *   ss.clear();           // limpiar selección
- */
+
 export class SearchSelect {
     constructor({ input, dropdown, items = [], onSelect, placeholder = 'Buscar...' }) {
         this.input     = input;
@@ -57,14 +45,12 @@ export class SearchSelect {
             if (this.input.value.trim()) this._filter(this.input.value.trim());
         });
 
-        // Cerrar al hacer click fuera
         document.addEventListener('click', (e) => {
             if (!this.input.contains(e.target) && !this.dropdown.contains(e.target)) {
                 this._hide();
             }
         });
 
-        // Navegación con teclado
         this.input.addEventListener('keydown', (e) => {
             const items = this.dropdown.querySelectorAll('.search-dropdown-item');
             const active = this.dropdown.querySelector('.search-dropdown-item.active');

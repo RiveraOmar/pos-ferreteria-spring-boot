@@ -470,9 +470,9 @@ export function sanitizar(texto, { permitirComillas = false } = {}) {
     const peligrosos = permitirComillas ? /[<>`\\]/g : /[<>'"`;\\]/g;
     return texto
         .trim()
-        .replace(/\s+/g, ' ')                  // espacios múltiples → uno
-        .replace(peligrosos, '')               // caracteres peligrosos
-        .substring(0, 1000);                   // máximo de seguridad
+        .replace(/\s+/g, ' ')                 
+        .replace(peligrosos, '')               
+        .substring(0, 1000);                   
 }
 
 

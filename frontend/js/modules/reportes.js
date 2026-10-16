@@ -1,22 +1,13 @@
 import { fetchAPI } from '../services/api.js';
 
-// ══════════════════════════════════════════════════════════════════════════════
-// REPORTES
-// Antes solo mostraba UN día. La pregunta que de verdad importa —"¿cómo me fue
-// este mes?"— no se podía contestar. Ahora trabaja por RANGO de fechas y
-// compara contra el periodo anterior equivalente, para saber si vas mejor o peor.
-//
-// Todo se calcula desde /sales/search (que ya existía): no hizo falta tocar el
-// backend.
-// ══════════════════════════════════════════════════════════════════════════════
 
-let ventasCache = [];   // ventas del rango actual (para exportar sin re-pedir)
+
+let ventasCache = [];   
 let rangoActual = { inicio: null, fin: null, etiqueta: '' };
 
 const fmt  = (n) => `$${Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtN = (n) => Number(n || 0).toLocaleString('es-MX');
 
-// ─── FECHAS ───────────────────────────────────────────────────────────────────
 const aISO = (d) => d.toISOString().split('T')[0];
 
 function rangosRapidos() {
@@ -90,7 +81,6 @@ export function initReportes(container) {
             </div>
         </div>`;
 
-    // Botones de rango rápido
     document.querySelectorAll('#botones-rango button').forEach(b => {
         b.addEventListener('click', () => {
             const sel = rangosRapidos()[b.dataset.rango];
@@ -111,24 +101,22 @@ export function initReportes(container) {
     document.getElementById('btn-exportar-reporte')
         .addEventListener('click', exportarCSV);
 
-    generarReporte('Este mes');   // arranca con el mes en curso
+    generarReporte('Este mes');   
 }
 
-// ─── CÁLCULO ──────────────────────────────────────────────────────────────────
-// Un solo recorrido de las ventas saca todos los números del reporte.
 function analizar(ventas) {
     const r = {
         n: 0, ingresos: 0, costo: 0, iva: 0,
-        productos: {},         // nombre → { cantidad, importe }
-        porDia: {},            // 'YYYY-MM-DD' → importe
-        porPago: {},           // método → { n, importe }
+        productos: {},        
+        porDia: {},           
+        porPago: {},           
         canceladas: 0
     };
 
     ventas.forEach(v => {
         if (String(v.status || '').toUpperCase().includes('CANCEL')) {
             r.canceladas++;
-            return;                       // las canceladas no cuentan como venta
+            return;                      
         }
         r.n++;
         const total = Number(v.totalAmount) || 0;
@@ -159,7 +147,6 @@ function analizar(ventas) {
     return r;
 }
 
-// Periodo anterior del mismo tamaño, para comparar contra algo real
 function periodoAnterior(inicio, fin) {
     const i = new Date(inicio + 'T00:00:00');
     const f = new Date(fin + 'T00:00:00');
@@ -170,7 +157,6 @@ function periodoAnterior(inicio, fin) {
 }
 
 async function pedirVentas(inicio, fin) {
-    // El backend espera fecha-hora: se cubre el día completo
     return await fetchAPI(
         `/sales/search?inicio=${inicio}T00:00:00&fin=${fin}T23:59:59`);
 }
@@ -196,7 +182,6 @@ async function generarReporte(etiqueta = '') {
 
     try {
         const ant = periodoAnterior(inicio, fin);
-        // El periodo anterior es informativo: si falla, el reporte igual sale
         const [ventas, ventasAnt] = await Promise.all([
             pedirVentas(inicio, fin),
             pedirVentas(ant.inicio, ant.fin).catch(() => [])
@@ -214,8 +199,6 @@ async function generarReporte(etiqueta = '') {
     }
 }
 
-// ─── RENDER ───────────────────────────────────────────────────────────────────
-// Flecha de comparación contra el periodo anterior
 function delta(actual, anterior, invertir = false) {
     if (!anterior) return '';
     const pct = ((actual - anterior) / Math.abs(anterior)) * 100;
@@ -258,7 +241,6 @@ function renderReporte(a, ant, rangoAnt) {
         return;
     }
 
-    // ── Gráfica de ventas por día ──
     const dias = Object.keys(a.porDia).sort();
     const maxDia = Math.max(...Object.values(a.porDia), 1);
     const grafica = dias.length > 1
@@ -287,13 +269,11 @@ function renderReporte(a, ant, rangoAnt) {
            </div>`
         : '';
 
-    // ── Top productos ──
     const top = Object.entries(a.productos)
         .sort((x, y) => y[1].importe - x[1].importe)
         .slice(0, 10);
     const maxImp = top.length ? top[0][1].importe : 1;
 
-    // ── Métodos de pago ──
     const pagos = Object.entries(a.porPago).sort((x, y) => y[1].importe - x[1].importe);
 
     cont.innerHTML = `
@@ -411,8 +391,6 @@ function renderReporte(a, ant, rangoAnt) {
         </div>`;
 }
 
-// ─── EXPORTAR ─────────────────────────────────────────────────────────────────
-// CSV que abre directo en Excel: una fila por venta, con sus totales.
 function exportarCSV() {
     if (!ventasCache.length) return;
 
@@ -434,12 +412,10 @@ function exportarCSV() {
         ]);
     });
 
-    // Comillas y punto y coma: así Excel en español lo abre en columnas
     const csv = filas
         .map(f => f.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';'))
         .join('\n');
 
-    // BOM para que Excel respete los acentos
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');

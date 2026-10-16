@@ -14,20 +14,11 @@ import {
     PLANTILLAS_MEDIDAS, textoDual
 } from '../services/plantillasmedidas.js';
 
-// OJO con la M: el archivo en disco se llama plantillasmedidas.js, todo en
-// minúsculas. Windows no distingue mayúsculas en los nombres de archivo, así
-// que 'plantillasMedidas.js' funciona aquí — pero en un servidor Linux ese
-// import truena y el módulo entero deja de cargar.
-
-// ─── MAPA SAT → comportamiento de cantidad ────────────────────────────────────
-// Determina si el producto acepta decimales según su clave de unidad SAT.
-// No se necesita campo extra en la BD — se deriva de satClaveUnidad.
 const UNIDADES_DECIMALES = new Set([
     'MTR','KGM','GRM','LTR','MLT','CMT','MTK','DMT',
     'DMQ','HLT','TNE','MGM','H87P' // H87P = por peso
 ]);
 
-// Etiqueta amigable por clave SAT
 const ETIQUETA_UNIDAD = {
     H87:'pza', SET:'juego', KT:'kit', PR:'par', BX:'caja',
     MTR:'m',   CMT:'cm',   MMT:'mm', MTK:'m²',
@@ -43,12 +34,9 @@ function etiquetaUnidad(satClaveUnidad) {
     return ETIQUETA_UNIDAD[(satClaveUnidad || '').toUpperCase()] || 'pza';
 }
 
-// ─── ESTADO ───────────────────────────────────────────────────────────────────
 let productoModalBS;
 let editandoId            = null;
-// Galería de fotos del producto que se está editando/creando.
-// Cada item: { id, url, titulo, orden }. Si id es null, la foto aún no se ha
-// guardado (producto nuevo): se sube al crear el producto.
+
 let galeriaFotos          = [];
 let categoriaFiltroActual = '';
 let flatCategories        = [];
@@ -56,13 +44,6 @@ let satUnidades           = [];
 let ssUnidad              = null;
 let ssCategoria            = null;
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  CARGA MASIVA DE EXISTENCIAS
-//  Deja TODO el catálogo con la misma cantidad de piezas y da de alta el
-//  renglón de inventario a los productos que nunca lo tuvieron (sin ese
-//  renglón el producto no se puede vender ni, por lo tanto, facturar).
-//  El modo seguro (default) respeta los productos que ya tienen existencias.
-// ══════════════════════════════════════════════════════════════════════════════
 async function abrirStockMasivo() {
     const r = await Swal.fire({
         title: 'Cargar existencias al catálogo',
@@ -580,9 +561,6 @@ export async function initProductos(container) {
         </div>
     </div>`;
 
-    // ─── SearchSelect Unidad SAT ─────────────────────────────────────────────
-    // Selección normal (clic) Y AUTOLLENADO: escribir "pieza", "kg",
-    // "metro"... coloca la clave SAT sola, sin tener que dar clic.
     function seleccionarUnidadSat(item) {
             document.getElementById('f-satClaveUnidad').value = item.id;
             document.getElementById('input-satClaveUnidad').classList.remove('is-invalid');
@@ -595,7 +573,6 @@ export async function initProductos(container) {
                         document.getElementById('sat-unidad-seleccion').innerHTML='';
                         document.getElementById('badge-decimal').style.display='none';
                         window._ssUnidad.clear()">✕</a>`;
-            // Mostrar badge de decimales
             const dec = esDecimal(item.id);
             const etq = etiquetaUnidad(item.id);
             const badge = document.getElementById('badge-decimal');
@@ -611,9 +588,7 @@ export async function initProductos(container) {
                    </span>`;
     }
 
-    // Alias de mostrador → clave SAT. Se resuelven CONTRA el catálogo
-    // cargado: si una clave no existiera en él, el alias simplemente no
-    // autoselecciona (cero riesgo de meter claves inválidas).
+    
     const ALIAS_UNIDAD = {
         pieza:'H87', piezas:'H87', pza:'H87', pzas:'H87', pz:'H87', unidad:'H87',
         kilogramo:'KGM', kilogramos:'KGM', kilo:'KGM', kilos:'KGM', kg:'KGM', kgs:'KGM',
@@ -645,14 +620,11 @@ export async function initProductos(container) {
         const texto = normUni(inp.value || '');
         if (!texto) return false;
 
-        // 1) alias directo ("pieza" → H87), validado contra el catálogo
         let item = null;
         const clave = ALIAS_UNIDAD[texto];
         if (clave) item = itemsUnidad.find(i => i.id === clave);
-        // 2) el texto es exactamente una clave ("H87") o un nombre ("Kilogramo")
         if (!item) item = itemsUnidad.find(i =>
             normUni(i.id) === texto || normUni(i.label) === texto);
-        // 3) con Enter/blur: si empieza igual y es única, también vale
         if (!item && conFallback) {
             const arranca = itemsUnidad.filter(i =>
                 normUni(i.label).startsWith(texto));
@@ -666,9 +638,6 @@ export async function initProductos(container) {
         return true;
     }
 
-    // ── Categoría, con buscador ─────────────────────────────────────────
-    // sub muestra la ruta del padre (ej: "Tornillería > Hexagonales") para
-    // distinguir categorías con nombres parecidos en ramas distintas.
     function itemsDeCategorias() {
         return flatCategories.map(c => {
             const padreId = c.parent?.id ?? c.parentId;
@@ -712,8 +681,6 @@ export async function initProductos(container) {
     });
     window._ssUnidad = ssUnidad;
 
-    // Autollenado: al escribir (con pausa breve), al salir del campo y con
-    // Enter. Escribes "pieza" y la H87 se coloca sola — cero clics.
     {
         const inpUni = document.getElementById('input-satClaveUnidad');
         let tUni = null;
@@ -725,19 +692,13 @@ export async function initProductos(container) {
             () => setTimeout(() => autoSeleccionarUnidad(true), 150));
         inpUni.addEventListener('keydown', e => {
             if (e.key === 'Enter') {
-                e.preventDefault();          // que no dispare el submit
+                e.preventDefault();          
                 autoSeleccionarUnidad(true);
             }
         });
     }
 
-    // Nota: el SearchSelect de Objeto de Impuesto se eliminó. El campo
-    // satObjetoImp ahora es un input oculto con valor fijo "02" ("Sí objeto
-    // de impuesto") — en una ferretería real no hay otro caso relevante,
-    // así que ya no se le pide al usuario que lo busque cada vez.
-
-    // ─── CÁMARA: escanear código de barras y tomar foto ──────────────────────
-    // Escanear → rellenar el campo de código de barras del formulario
+    
     document.getElementById('btn-escanear-barcode')?.addEventListener('click', async () => {
         const codigo = await escanearCodigoBarras();
         if (codigo) {
@@ -746,15 +707,12 @@ export async function initProductos(container) {
         }
     });
 
-    // Escanear desde el buscador → buscar ese producto en la lista
    document.getElementById('btn-escanear-busqueda')?.addEventListener('click', async () => {
     const codigo = await escanearCodigoBarras();
 
     if (codigo) {
         const inp = document.getElementById('filter-search');
 
-        // Algunos lectores entregan el punto de ciertos SKU
-        // como comilla simple. El SKU de nuestro sistema usa punto.
         const codigoCorregido = String(codigo)
             .replace(/[’‘']/g, '.');
 
@@ -766,7 +724,6 @@ export async function initProductos(container) {
     }
 });
 
-    // Tomar foto → se comprime y sube → entra a la galería
     document.getElementById('btn-foto-producto')?.addEventListener('click', async () => {
         if (galeriaFotos.length >= MAX_FOTOS) {
             Swal.fire('Máximo alcanzado',
@@ -778,9 +735,7 @@ export async function initProductos(container) {
         if (url) await agregarFotoGaleria(url);
     });
 
-    // Agregar una foto desde una URL de internet
-   // Agregar una foto desde una URL de internet
-// Agregar una foto desde una URL de internet
+    
 document.getElementById('btn-foto-url')?.addEventListener('click', async () => {
 
     if (galeriaFotos.length >= MAX_FOTOS) {
@@ -867,8 +822,7 @@ document.getElementById('btn-foto-url')?.addEventListener('click', async () => {
 
         heightAuto: false,
 
-        // IMPORTANTE:
-        // El Swal se coloca DENTRO del modal de producto
+        
         target: document.getElementById('productoModal'),
 
         didOpen: () => {
@@ -878,17 +832,14 @@ document.getElementById('btn-foto-url')?.addEventListener('click', async () => {
             const img = document.getElementById('img-preview-url');
             const error = document.getElementById('error-preview-url');
 
-            // Dar el foco al campo
             setTimeout(() => {
                 input.focus();
             }, 100);
 
-            // Detectar cuando escribes o pegas una URL
             input.addEventListener('input', () => {
 
                 const url = input.value.trim();
 
-                // Si está vacío
                 if (!url) {
                     preview.style.display = 'none';
                     error.style.display = 'none';
@@ -896,7 +847,6 @@ document.getElementById('btn-foto-url')?.addEventListener('click', async () => {
                     return;
                 }
 
-                // Intentar cargar la imagen
                 img.onload = () => {
                     preview.style.display = 'block';
                     error.style.display = 'none';
@@ -931,7 +881,6 @@ document.getElementById('btn-foto-url')?.addEventListener('click', async () => {
         }
     });
 
-    // Si presionó Agregar
     if (r.isConfirmed && r.value) {
 
         await agregarFotoGaleria(r.value.trim());
@@ -940,7 +889,6 @@ document.getElementById('btn-foto-url')?.addEventListener('click', async () => {
 
 });
 
-    // ─── Búsqueda clave SAT ──────────────────────────────────────────────────
     document.getElementById('btn-buscar-sat-prod')
         .addEventListener('click', buscarClaveSat);
     document.getElementById('sat-prod-buscar')
@@ -948,7 +896,6 @@ document.getElementById('btn-foto-url')?.addEventListener('click', async () => {
             if (e.key === 'Enter') { e.preventDefault(); buscarClaveSat(); }
         });
 
-    // ─── Modales ─────────────────────────────────────────────────────────────
     document.getElementById('productoModal')
         .addEventListener('hidden.bs.modal',
             () => limpiarValidaciones('form-producto'));
@@ -958,15 +905,12 @@ document.getElementById('btn-foto-url')?.addEventListener('click', async () => {
     document.getElementById('btn-nuevo-producto').onclick = () => abrirModal();
     document.getElementById('btn-etiquetas').onclick = abrirSelectorEtiquetas;
 
-    // Carga masiva de existencias — solo el dueño (el backend también lo exige)
     const btnStock = document.getElementById('btn-stock-masivo');
     if (!tieneRol('ADMIN')) btnStock.classList.add('d-none');
     else btnStock.onclick = abrirStockMasivo;
     document.getElementById('btn-agregar-atributo').onclick =
         () => agregarFilaAtributo();
 
-    // Plantilla de medidas: agrega los campos del tipo elegido (vacíos),
-    // sin duplicar los que ya estén capturados en el formulario.
     document.getElementById('plantilla-atributos').onchange = (e) => {
         const tpl = PLANTILLAS_MEDIDAS[e.target.value];
         if (!tpl) return;
@@ -977,17 +921,17 @@ document.getElementById('btn-foto-url')?.addEventListener('click', async () => {
             if (!existentes.has(campo.clave.toLowerCase()))
                 agregarFilaAtributo(campo.clave, '');
         });
-        e.target.value = '';   // listo para combinar otra plantilla
+        e.target.value = '';   
     };
-    // Al entrar a Productos, el refresco post-restock es el propio módulo
+    
     window.onRestockSuccess = null;
 
-    // Exponer filtro globalmente para oninput en HTML
+    
     window._filtro = aplicarFiltroInput;
 
     const sub = document.getElementById('sub-modulo-container');
 
-    // Marca visualmente la pestaña activa (antes el subrayado no se movía)
+    
     const marcarTab = (id) => {
         ['tab-todos', 'tab-categorias'].forEach(t =>
             document.getElementById(t)?.classList.toggle('active', t === id));
@@ -996,7 +940,7 @@ document.getElementById('btn-foto-url')?.addEventListener('click', async () => {
         marcarTab('tab-todos');
         renderVistaPrincipal(sub);
     };
-    // Categorías ahora vive AQUÍ, junto a los productos que clasifica
+    
     document.getElementById('tab-categorias').onclick = () => {
         marcarTab('tab-categorias');
         initCategorias(sub);
@@ -1006,7 +950,6 @@ document.getElementById('btn-foto-url')?.addEventListener('click', async () => {
     cargarCategorias();
 }
 
-// ─── BUSCAR CLAVE SAT ─────────────────────────────────────────────────────────
 async function buscarClaveSat() {
     const q = document.getElementById('sat-prod-buscar').value.trim();
     if (!q || q.length < 3) {
@@ -1046,7 +989,6 @@ async function buscarClaveSat() {
     } catch (e) { console.error(e); }
 }
 
-// ─── VISTA PRINCIPAL ──────────────────────────────────────────────────────────
 async function renderVistaPrincipal(container) {
     container.innerHTML = `
         <div class="card shadow-sm border-0 mb-4">
@@ -1220,12 +1162,10 @@ async function renderVistaPrincipal(container) {
                  style="display:none"></div>
         </div>`;
 
-    // Autofocus real (el atributo no aplica en HTML inyectado)
     setTimeout(() => document.getElementById('filter-search')?.focus(), 50);
 
     const inpBuscar = document.getElementById('filter-search');
 
-    // Al teclear: los resultados caen DIRECTO en la tabla de abajo (no dropdown)
     let _timerSug = null;
     inpBuscar.addEventListener('input', () => {
         clearTimeout(_timerSug);
@@ -1236,7 +1176,6 @@ async function renderVistaPrincipal(container) {
     inpBuscar.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            // Enter (o el lector de código de barras) fuerza la búsqueda ya
             clearTimeout(_timerSug);
             buscarEnTabla(inpBuscar.value);
             return;
@@ -1247,9 +1186,6 @@ async function renderVistaPrincipal(container) {
         }
     });
 
-    // Código Truper — MISMA búsqueda de tabla que el general (el backend ya
-    // reconoce un código de 4-10 dígitos y lo busca primero por Truper);
-    // aquí solo cambia dónde escribe, para que sea explícito.
     const inputTruper = document.getElementById('filter-truper');
     let timerTruper = null;
     inputTruper.addEventListener('input', () => {
@@ -1266,7 +1202,6 @@ async function renderVistaPrincipal(container) {
         if (e.key === 'Escape') { e.target.value = ''; buscarEnTabla(''); }
     });
 
-    // Filtro de estado (Activos / Catálogo dormido / Todos)
     document.querySelectorAll('#prod-filtro-estado [data-estado]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.estado === filtroEstado);
         btn.addEventListener('click', () => {
@@ -1286,15 +1221,12 @@ configurarSeleccionMultipleProductos();
 
 await cargarCategoriasDropdownFiltro();
 
-// Al entrar al módulo de Productos se carga automáticamente
-// el catálogo completo. La paginación se hace en el navegador,
-// por lo que después cambiar de página es instantáneo.
+
 estadoInicialProductos();
 await verTodosPaginado();
 }
 
 
-// ─── PESTAÑAS DEL BUSCADOR (General / Código Truper / Por atributo) ──────────
 function configurarPestanasBuscadorProductos() {
     document.querySelectorAll('#prod-buscador-tabs [data-tab-buscar-prod]').forEach(btn => {
         btn.addEventListener('click', () => activarPestanaBuscadorProductos(btn.dataset.tabBuscarProd));
@@ -1334,9 +1266,6 @@ function activarPestanaBuscadorProductos(tab) {
 }
 
 
-// ─── SELECCIÓN MÚLTIPLE — desactivar varios productos de un jalón ────────────
-// Delegación de eventos: la tabla se repinta muchas veces (búsqueda, filtros,
-// paginación) y así no hay que re-enganchar los checkboxes cada vez.
 function configurarSeleccionMultipleProductos() {
     const tabla = document.getElementById('tabla-productos-body');
     const barra = document.getElementById('prod-barra-seleccion');
@@ -1353,11 +1282,7 @@ function configurarSeleccionMultipleProductos() {
         if (e.target.classList.contains('prod-check')) actualizar();
     });
 
-    // Botones de cada fila (ver / editar / surtir / activar).
-    // Se manejan por DELEGACION y no con onclick= en el HTML: los nombres de
-    // ferreteria traen comillas dobles ('Tornillo 1/2"') y esas comillas
-    // cerraban el atributo a media instruccion, dejando el boton muerto.
-    // Con data- attributes el nombre viaja escapado y ya no puede romper nada.
+    
     tabla.addEventListener('click', e => {
         const btn = e.target.closest('button[data-accion]');
         if (!btn) return;
@@ -1385,9 +1310,7 @@ function configurarSeleccionMultipleProductos() {
         actualizar();
     });
 
-    // Activar en bloque: es lo que hace usable el catálogo dormido. Marcas
-    // los 20 tornillos que sí manejas de los 1,800 dados de alta, y con un
-    // clic empiezan a aparecer en Ventas.
+    
     document.getElementById('btn-activar-seleccionados').addEventListener('click', async () => {
         const ids = [...tabla.querySelectorAll('.prod-check:checked')]
             .filter(c => c.dataset.active !== 'true')
@@ -1438,9 +1361,7 @@ function configurarSeleccionMultipleProductos() {
         });
         if (!r.isConfirmed) return;
         try {
-            // Una sola petición en vez de N. Con 200 seleccionados, el
-            // Promise.all anterior disparaba 200 DELETE simultáneos y el
-            // backend se atragantaba.
+            
             await fetchAPI('/products/estado-masivo', {
                 method: 'PATCH',
                 body: { ids: marcados.map(c => Number(c.value)), activo: false }
@@ -1455,7 +1376,6 @@ function configurarSeleccionMultipleProductos() {
     });
 }
 
-// Pantalla de arranque: invita a buscar en vez de volcar el catálogo entero
 function estadoInicialProductos() {
     const tabla = document.getElementById('tabla-productos-body');
     if (!tabla) return;
@@ -1483,31 +1403,16 @@ function estadoInicialProductos() {
 
 
 
-// ─── TABLA DE PRODUCTOS ───────────────────────────────────────────────────────
-// ══════════════════════════════════════════════════════════════════════════════
-// PAGINACIÓN
-// El catálogo completo se trae UNA vez y se guarda en memoria; después pasar de
-// página es instantáneo (no hay ida al servidor).
-//
-// Nota honesta: lo ideal sería paginar en el BACKEND (Spring Pageable), para
-// no traer nunca el catálogo entero. Esto es el punto intermedio: un solo
-// costo al abrir "Ver todo", y de ahí en adelante vuela. Buscar sigue usando
-// el servidor, que es lo que se usa el 95% del tiempo.
-// ══════════════════════════════════════════════════════════════════════════════
 
-// Filtro de estado de la lista: 'activos' | 'inactivos' | 'todos'.
-// Vive aquí y no dentro de renderVistaPrincipal para que sobreviva a los
-// repintados de la tabla.
 let filtroEstado = 'activos';
 
-// ¿Este producto entra en el filtro que está puesto?
 function pasaFiltroEstado(p) {
     if (filtroEstado === 'activos')   return p.active !== false;
     if (filtroEstado === 'inactivos') return p.active === false;
     return true;
 }
 
-let catalogoCache  = null;   // productos ya traídos (null = aún no)
+let catalogoCache  = null;   
 let paginaActual   = 1;
 const POR_PAGINA   = 50;
 
@@ -1519,8 +1424,6 @@ window.verTodosPaginado = async () => {
             <p class="text-muted small mt-2 mb-0">
                 Cargando el catálogo completo (solo esta vez)...</p></td></tr>`;
         try {
-            // incluirInactivos: en Productos SÍ se ven los desactivados —
-            // es el único lugar desde donde se pueden volver a activar.
             catalogoCache = await fetchAPI('/products?incluirInactivos=true');
         } catch (e) {
             tabla.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-5">
@@ -1553,7 +1456,6 @@ function renderControlesPagina(total, paginas, desde, enPagina) {
     if (!cont) return;
     cont.style.display = 'block';
 
-    // Ventana de páginas alrededor de la actual (no pintar 315 botones)
     const ini = Math.max(1, paginaActual - 2);
     const fin = Math.min(paginas, ini + 4);
 
@@ -1596,21 +1498,15 @@ function ocultarPaginacion() {
     if (c) c.style.display = 'none';
 }
 
-// Escapa el texto que se mete al HTML. Es lo que impide que un nombre con
-// comillas o con < > rompa la fila de la tabla (o peor: inyecte etiquetas).
 const escaparHtml = (t) => String(t ?? '').replace(/[&<>"']/g,
     c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
-// ─── BÚSQUEDA DIRECTA EN LA TABLA ────────────────────────────────────────────
-// En vez de un dropdown de sugerencias, los resultados caen directo en la
-// tabla de abajo, donde se opera con todas las acciones (editar, etc.).
 async function buscarEnTabla(termino) {
     const tabla = document.getElementById('tabla-productos-body');
     const paginacion = document.getElementById('paginacion-productos');
     if (!tabla) return;
 
     if (termino.trim().length < 2) {
-        // Búsqueda vacía: si hay catálogo cargado, volver a paginarlo; si no, placeholder
         if (catalogoCache) { paginaActual = 1; pintarPagina(); }
         else {
             tabla.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-5">
@@ -1635,10 +1531,8 @@ async function buscarEnTabla(termino) {
                 Sin resultados para "${escaparHtml(termino)}"</td></tr>`;
             return;
         }
-        // Reutiliza el mismo render de filas (con todas las acciones)
         renderFilasProductos(resultados);
         avisoCatalogoDormido();
-        // Aviso de cuántos encontró, arriba de la tabla
         const cont = document.getElementById('paginacion-productos');
         if (cont) {
             cont.style.display = 'block';
@@ -1653,10 +1547,6 @@ async function buscarEnTabla(termino) {
     }
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-//  ETIQUETAS DE ANAQUEL — precio estilo mostrador + código de barras +
-//  costo CIFRADO (clave MEXICANOS del backend). Hoja carta, 3 columnas.
-// ═════════════════════════════════════════════════════════════════════════════
 let etiquetasSeleccion = new Map();   // id → producto
 
 async function abrirSelectorEtiquetas() {
@@ -1735,11 +1625,7 @@ const lista = catalogo.filter(p =>
 }
 
 function imprimirEtiquetas(productos) {
-    // Misma "etiquetadora" que el ticket: rollo térmico de 58mm, 44mm de
-    // contenido útil, monocromática (solo negro — nada de azul, saldría
-    // gris lavado). Una etiqueta por producto, apiladas con salto de
-    // página entre cada una para que el alto se ajuste solo a cada una
-    // y no se pase de papel en blanco.
+    
     const bloques = productos.map((p, i) => {
         const precio = Number(p.price || p.listPrice || 0);
         const pesos  = Math.floor(precio);
@@ -1883,9 +1769,7 @@ ${codigo
     w.document.close();
 }
 
-// Aviso arriba de la tabla cuando se está mirando el catálogo dormido.
-// Sin esto, la lista se ve igual que la normal y es fácil no entender por
-// qué esos productos no aparecen en Ventas.
+
 function avisoCatalogoDormido() {
     document.getElementById('aviso-dormido')?.remove();
     if (filtroEstado !== 'inactivos') return;
@@ -1903,9 +1787,7 @@ function avisoCatalogoDormido() {
     card.insertBefore(div, card.firstChild);
 }
 
-// ─── PINTAR FILAS ─────────────────────────────────────────────────────────────
-// Extraída de cargarProductos para que la paginación pueda reusarla:
-// antes las filas se generaban inline y no había forma de pintar solo una página.
+
 function renderFilasProductos(productos) {
     const tabla = document.getElementById('tabla-productos-body');
     if (!tabla) return;
@@ -2058,15 +1940,13 @@ async function cargarProductos(filtros = {
     tabla.innerHTML = `<tr><td colspan="10" class="text-center py-4">
         <div class="spinner-border text-primary"></div></td></tr>`;
     try {
-        // Sin criterio no se pide nada: pedir '/products' traería el catálogo
-        // completo (miles de registros) y dejaría el módulo lento.
+        
         if (!filtros.categoria && !filtros.q && !filtros.plantilla) {
             estadoInicialProductos();
             return;
         }
 
-        // El filtro por atributo sí necesita el catálogo completo (se filtra
-        // en el navegador), así que se avisa que puede tardar.
+        
        let url = filtros.categoria
     ? `/products/category/${filtros.categoria}`
     : filtros.q
@@ -2074,9 +1954,7 @@ async function cargarProductos(filtros = {
         : '/products?incluirInactivos=true';
         let productos = (await fetchAPI(url)).filter(pasaFiltroEstado);
 
-                // ═══════════════════════════════════════════════════════════════
-        // FILTROS MÚLTIPLES POR PLANTILLA
-        // ═══════════════════════════════════════════════════════════════
+
         if (filtros.plantilla) {
             const tpl = PLANTILLAS_MEDIDAS[filtros.plantilla];
 
@@ -2085,8 +1963,7 @@ async function cargarProductos(filtros = {
                     ? tpl.identifica
                     : (tpl.campos || []).map(c => c.clave);
 
-                // Primero dejamos únicamente productos que pertenecen a la
-                // plantilla seleccionada.
+                
                 productos = productos.filter(p => {
                     const attrs = p.attributes || {};
                     return clavesIdentificadoras.length === 0 ||
@@ -2095,7 +1972,6 @@ async function cargarProductos(filtros = {
                         );
                 });
 
-                // Después TODOS los filtros activos deben cumplirse (AND).
                 const filtrosConValor = (filtros.atributos || []).filter(f =>
                     f?.clave && String(f?.valor ?? '').trim() !== ''
                 );
@@ -2110,8 +1986,7 @@ async function cargarProductos(filtros = {
                         const buscado = normalizarTextoBusqueda(filtro.valor);
                         const valor = normalizarTextoBusqueda(String(valorProducto));
 
-                        // Para texto y medidas permitimos coincidencia contenida.
-                        // Esto mantiene búsquedas como "1/4" o "hexagonal" cómodas.
+                        
                         return valor === buscado || valor.includes(buscado);
                     });
                 });
@@ -2127,8 +2002,7 @@ async function cargarProductos(filtros = {
             return;
         }
 
-        // Los resultados de búsqueda no van paginados: se oculta el pie
-        // o mostraría un conteo que no corresponde a lo que se ve.
+        
         ocultarPaginacion();
         renderFilasProductos(productos);
     } catch (e) {
@@ -2137,13 +2011,10 @@ async function cargarProductos(filtros = {
     }
 }
 
-// ─── GUARDAR PRODUCTO ─────────────────────────────────────────────────────────
 async function guardarProducto(e) {
     e.preventDefault();
     limpiarValidaciones('form-producto');
 
-    // permitirComillas: en ferretería 1/2" x 3" ES la medida, no un ataque.
-    // Es seguro porque este módulo escapa el texto al pintarlo (escaparHtml).
     const nombreOk = validarTexto('prod-name', {
         label:'Nombre', minLen:2, maxLen:200, requerido:true,
         noEspeciales:true, permitirComillas:true
@@ -2156,10 +2027,7 @@ async function guardarProducto(e) {
         label:'Stock mínimo', min:0, requerido:false, decimales:3
     });
 
-    // En modo BOLSA el campo "Costo" se esconde (_setupBolsaUI lo oculta) y su
-    // lugar lo toma "Costo de cada pieza". Antes se seguia exigiendo el campo
-    // escondido: al guardar decia "hay errores marcados en rojo" señalando algo
-    // que no se podia ver ni llenar. Ahora se valida el que SI esta visible.
+    
     const esBolsaForm = document.getElementById('prod-es-bolsa')?.checked;
     const costoVal = esBolsaForm
         ? document.getElementById('prod-cost-pieza')?.value?.trim()
@@ -2175,12 +2043,10 @@ async function guardarProducto(e) {
     }
 
     const imgVal = document.getElementById('prod-imagen-url')?.value?.trim();
-    // Las fotos subidas devuelven rutas relativas (/uploads/..): válidas sin ser URL http
     const imgOk  = (!imgVal || imgVal.startsWith('/uploads/'))
         ? true : validarURL('prod-imagen-url', false);
 
-    // Unidad de Medida es obligatoria: controla si el producto acepta
-    // cantidades fraccionarias (kg, m, L) o solo piezas completas.
+    
     const unidadVal = document.getElementById('f-satClaveUnidad').value;
     let unidadOk = true;
     if (!unidadVal) {
@@ -2197,7 +2063,6 @@ async function guardarProducto(e) {
         return;
     }
 
-    // Advertir si precio < costo (no bloquea)
     if (costoVal && precioOk) {
         const ok = validarCostoVsPrecio(idCampoCosto, 'prod-price');
         if (!ok) {
@@ -2218,12 +2083,9 @@ async function guardarProducto(e) {
     const f = new FormData(e.target);
     const attrs = {};
     document.querySelectorAll('.fila-atributo').forEach(row => {
-        // Los atributos son donde más viven las medidas: 1/2" (12.70 mm)
         const OPC = { permitirComillas: true };
         const k = row.querySelector('.attr-k').value.trim();
         const v = row.querySelector('.attr-v').value.trim();
-        // Clave sin valor → se guarda NULA: el campo existe en el producto
-        // (medida que no aplica o falta capturar), sin inventar valores.
         if (k) attrs[sanitizar(k, OPC)] = v ? sanitizar(v, OPC) : null;
     });
     const codigoTruper = document.getElementById('prod-codigo-truper').value.trim();
@@ -2238,16 +2100,6 @@ async function guardarProducto(e) {
         sku:              f.get('sku').trim().toUpperCase(),
         barcode:          f.get('barcode')?.trim() || null,
         listPrice,
-        // minPrice = piso de venta. En esta ferreteria NO se usa como regla de
-        // negocio: no tiene campo en ningun formulario, asi que nadie lo captura
-        // a conciencia. Antes se copiaba del precio de venta, y eso causaba un
-        // bug feo: el modal de "Agregar stock" baja listPrice pero NO toca
-        // minPrice, los dos se separaban, y el producto quedaba invendible
-        // ("precio por debajo del minimo").
-        //
-        // Ahora nace en el minimo absoluto para que nunca bloquee. Quien de
-        // verdad cuida el dinero es la validacion contra el COSTO, que sigue
-        // funcionando igual (aqui abajo y en el restock).
         minPrice:         0.01,
         description:      sanitizar(f.get('description') || '', { permitirComillas: true }),
         minStockLevel:    parseFloat(f.get('minStockLevel')) || 0,
@@ -2262,7 +2114,6 @@ async function guardarProducto(e) {
     };
     if (costoVal) payload.costPrice = parseFloat(costoVal);
 
-    // Compra por bolsa: guardar los datos y usar el costo por pieza como costo
     const esBolsa = document.getElementById('prod-es-bolsa')?.checked;
     payload.compraPorBolsa = !!esBolsa;
     if (esBolsa) {
@@ -2272,8 +2123,7 @@ async function guardarProducto(e) {
         payload.costoBolsa     = costoB || null;
         const precioB = parseFloat(document.getElementById('prod-precio-bolsa').value) || 0;
         payload.precioBolsa = precioB || null;
-        // El costo por pieza EDITABLE manda como costo del producto.
-        // (Se sugirió desde la bolsa, pero el usuario pudo ajustarlo.)
+        
         const costoPiezaEdit = parseFloat(
             document.getElementById('prod-cost-pieza').value) || 0;
         if (costoPiezaEdit > 0) {
@@ -2295,13 +2145,11 @@ async function guardarProducto(e) {
         const guardado = await fetchAPI(editandoId ? `/products/${editandoId}` : '/products',
             { method: editandoId ? 'PUT' : 'POST', body: payload });
 
-        // Producto NUEVO: sus fotos se acumularon en memoria; ahora que ya
-        // tiene id, se cuelgan de él.
+        
         if (!editandoId && guardado?.id && galeriaFotos.some(f => !f.id)) {
             await guardarFotosPendientes(guardado.id);
         }
 
-        // Sincronizar proveedores asignados (checkboxes de "lo surten")
         const provIds = [...document.querySelectorAll('.prov-check:checked')]
             .map(c => parseInt(c.value));
         try {
@@ -2312,13 +2160,11 @@ async function guardarProducto(e) {
         }
 
         productoModalBS.hide();
-        catalogoCache = null;   // el caché quedó viejo: se vuelve a pedir si hace falta
+        catalogoCache = null;   
         if (typeof window.refrescarBadges === 'function') window.refrescarBadges();
         aplicarFiltros();
 
-        // Producto NUEVO (no en ediciones, para no interrumpir cada ajuste
-        // de precio): ofrecer imprimir su etiqueta de anaquel de una vez,
-        // con el costo cifrado y precio YA confirmados por el servidor.
+        
         if (!editandoId) {
             const r = await Swal.fire({
                 icon: 'success', title: '¡Producto guardado!',
@@ -2342,17 +2188,9 @@ async function guardarProducto(e) {
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// GALERÍA DE FOTOS DEL PRODUCTO
-// Un producto puede tener varias fotos (frente, especificaciones, etiqueta...).
-// La primera (orden 0) es la PRINCIPAL: la que se ve en listas, ventas y tickets.
-//
-// Producto EXISTENTE  → cada cambio se guarda al momento contra la API.
-// Producto NUEVO      → las fotos se acumulan en memoria y se guardan al crear
-//                       el producto (aún no existe el id al que colgarlas).
-// ══════════════════════════════════════════════════════════════════════════════
 
-const MAX_FOTOS = 6;   // debe coincidir con ProductImageService.MAX_FOTOS
+
+const MAX_FOTOS = 6;   
 
 function renderGaleria() {
     const cont = document.getElementById('galeria-fotos');
@@ -2367,10 +2205,7 @@ function renderGaleria() {
             Sin fotos todavía
         </div>`;
 
-    // NO borrar prod-imagen-url aquí.
-    // Puede existir una imagen antigua guardada directamente
-    // en products.imagen_url aunque todavía no exista en product_images.
-
+    
     return;
 }
 
@@ -2403,7 +2238,6 @@ function renderGaleria() {
                 : ''}
         </div>`).join('');
 
-    // La principal viaja en el payload del producto (campo clásico imagenUrl)
     document.getElementById('prod-imagen-url').value = galeriaFotos[0].url;
 }
 
@@ -2418,7 +2252,6 @@ async function agregarFotoGaleria(url, titulo = null) {
             return;
         }
     } else {
-        // Producto nuevo: se guardan al crearlo
         galeriaFotos.push({ id: null, url, titulo });
     }
     renderGaleria();
@@ -2453,7 +2286,6 @@ window.galeriaPrincipal = async (i) => {
                 { method: 'PATCH' });
         } catch (e) { Swal.fire('Error', e.message, 'error'); return; }
     }
-    // Mover al frente
     galeriaFotos.splice(i, 1);
     galeriaFotos.unshift(f);
     renderGaleria();
@@ -2474,20 +2306,15 @@ window.galeriaTitulo = async (i) => {
     const titulo = (r.value || '').trim().substring(0, 80);
 
     if (f.id && editandoId) {
-        // Se re-crea el registro con el título (endpoint simple: borrar + agregar
-        // sería perder el orden, así que solo se actualiza en memoria y se
-        // guarda al vuelo con un POST de reemplazo no es necesario: el título
-        // es informativo. Se envía como parte de la foto al recargar.
         try {
             await fetchAPI(`/products/${editandoId}/imagenes/${f.id}/titulo`,
                 { method: 'PATCH', body: { titulo } });
-        } catch (e) { /* si el endpoint no existe, queda solo local */ }
+        } catch (e) {  }
     }
     f.titulo = titulo || null;
     renderGaleria();
 };
 
-// Carga la galería de un producto existente
 async function cargarGaleria(productId, imagenPrincipalExistente = '') {
     try {
         const fotos = await fetchAPI(`/products/${productId}/imagenes`);
@@ -2499,15 +2326,11 @@ async function cargarGaleria(productId, imagenPrincipalExistente = '') {
                 titulo: f.titulo
             }));
 
-            // La galería es la fuente principal.
             document.getElementById('prod-imagen-url').value =
                 galeriaFotos[0]?.url || imagenPrincipalExistente || '';
 
         } else {
-            // Algunos productos antiguos tienen imagenUrl directamente
-            // en products, pero todavía no tienen registro en product_images.
-            // En ese caso NO debemos borrar la imagen existente.
-            galeriaFotos = [];
+           galeriaFotos = [];
 
             document.getElementById('prod-imagen-url').value =
                 imagenPrincipalExistente || '';
@@ -2521,8 +2344,6 @@ async function cargarGaleria(productId, imagenPrincipalExistente = '') {
 
         galeriaFotos = [];
 
-        // MUY IMPORTANTE:
-        // si la galería falla, no borrar la URL que ya tenía el producto.
         document.getElementById('prod-imagen-url').value =
             imagenPrincipalExistente || '';
     }
@@ -2530,7 +2351,6 @@ async function cargarGaleria(productId, imagenPrincipalExistente = '') {
     renderGaleria();
 }
 
-// Tras crear un producto nuevo, sube las fotos que se acumularon
 async function guardarFotosPendientes(productId) {
     for (const f of galeriaFotos.filter(x => !x.id)) {
         try {
@@ -2542,9 +2362,6 @@ async function guardarFotosPendientes(productId) {
     }
 }
 
-// Precarga el costo del producto en el formulario.
-// Solo el dueño (ADMIN) puede verlo: para el vendedor el campo queda vacío y,
-// al guardar, el costo NO se toca (así no lo borra sin querer).
 async function precargarCosto(id) {
     const campo = document.getElementById('prod-cost');
     const hint  = document.getElementById('hint-costo');
@@ -2572,10 +2389,6 @@ async function precargarCosto(id) {
         if (hint) hint.textContent = 'Dejar vacío al editar para no cambiar.';
     }
 }
-
-// ─── ABRIR MODAL ──────────────────────────────────────────────────────────────
-
-// ─── PROVEEDORES DEL PRODUCTO (pre-asignación desde el alta) ─────────────────
 let proveedoresCache = null;
 
 async function renderProveedoresForm(seleccionados = []) {
@@ -2613,7 +2426,6 @@ async function renderProveedoresForm(seleccionados = []) {
     }).join('');
 }
 
-// Cálculo en vivo del costo por pieza y toggle de los campos de bolsa
 function _setupBolsaUI() {
     const chk    = document.getElementById('prod-es-bolsa');
     const campos = document.getElementById('prod-bolsa-campos');
@@ -2628,7 +2440,6 @@ function _setupBolsaUI() {
     const btnRecalc = document.getElementById('btn-recalc-costo');
     if (!chk) return;
 
-    // Sugerir el costo por pieza desde la bolsa (sin pisar si el usuario ya editó)
     const sugerir = (forzar) => {
         const p = parseInt(piezas.value) || 0;
         const c = parseFloat(costoB.value) || 0;
@@ -2669,8 +2480,6 @@ function _setupBolsaUI() {
 
     const toggle = () => {
         campos.style.display = chk.checked ? '' : 'none';
-        // El campo Costo original (fuera del bloque) se oculta cuando es bolsa,
-        // porque aquí adentro está el costo por pieza que hace su función.
         const grupoCostoOriginal = costoReal ? costoReal.closest('.col-md-4') : null;
         if (grupoCostoOriginal) grupoCostoOriginal.style.display = chk.checked ? 'none' : '';
         if (chk.checked) sugerir(false);
@@ -2680,7 +2489,7 @@ function _setupBolsaUI() {
     piezas.oninput = () => sugerir(false);
     costoB.oninput = () => sugerir(false);
     costoPieza.oninput = () => { costoPieza.dataset.editado = '1'; sugerir(false); };
-    if (btnRecalc) btnRecalc.onclick = () => sugerir(true);   // fuerza recálculo
+    if (btnRecalc) btnRecalc.onclick = () => sugerir(true);  
     if (precioB) precioB.oninput = compararVenta;
     if (precioPza) precioPza.addEventListener('input', compararVenta);
     toggle();
@@ -2701,12 +2510,11 @@ async function abrirModal(id = null) {
     document.getElementById('sat-unidad-seleccion').innerHTML = '';
     document.getElementById('input-satClaveUnidad').classList.remove('is-invalid');
     document.getElementById('badge-decimal').style.display = 'none';
-    galeriaFotos = [];      // producto nuevo arranca sin fotos
+    galeriaFotos = [];      
     renderGaleria();
-    renderProveedoresForm();          // checkboxes sin selección (alta)
+    renderProveedoresForm();          
     if (ssUnidad)  ssUnidad.clear();
 
-    // Resetear a los valores genéricos por default — no requieren búsqueda
     document.getElementById('f-satClaveProdServ').value = '01010101';
     document.getElementById('f-satObjetoImp').value     = '02';
 
@@ -2723,8 +2531,6 @@ async function abrirModal(id = null) {
             document.getElementById('prod-name').value     = p.name  || '';
             document.getElementById('prod-sku').value      = p.sku   || '';
             document.getElementById('prod-barcode').value  = p.barcode || '';
-            // El costo NO viaja en /products/{id} (se ocultaría el margen al
-            // vendedor). Se pide aparte y solo si quien edita es el dueño.
             await precargarCosto(id);
             document.getElementById('prod-price').value    = p.price || '';
             form.description.value                         = p.description || '';
@@ -2735,10 +2541,9 @@ document.getElementById('prod-imagen-url').value =
     imagenPrincipalExistente;
 
 await cargarGaleria(id, imagenPrincipalExistente);
-            // Proveedores ya ligados (con compras → bloqueados, no se desligan)
             try {
                 renderProveedoresForm(await fetchAPI(`/products/${id}/suppliers`));
-            } catch (e) { /* la sección ya muestra su propio error */ }
+            } catch (e) { }
             if (p.category) {
                 if (ssCategoria) ssCategoria.setValue(p.category.id);
                 else document.getElementById('input-cat-modal').value = p.category.name;
@@ -2750,8 +2555,6 @@ await cargarGaleria(id, imagenPrincipalExistente);
             if (p.attributes && Object.keys(p.attributes).length) {
                 document.getElementById('lista-atributos').innerHTML = '';
                 Object.entries(p.attributes)
-                    // El código Truper ya tiene su propio campo arriba —
-                    // no se repite en la lista genérica de atributos.
                     .filter(([k]) => k !== 'codigo_truper')
                     .forEach(([k,v]) => agregarFilaAtributo(k, v ?? ''));
             }
@@ -2780,13 +2583,8 @@ await cargarGaleria(id, imagenPrincipalExistente);
                            </span>`;
                 }
             }
-            // satObjetoImp es un campo oculto fijo — solo se precarga el valor,
-            // sin búsqueda visual, ya que en la práctica siempre es "02".
             document.getElementById('f-satObjetoImp').value = p.satObjetoImp || '02';
 
-            // Si el producto está dormido, avisarlo dentro del modal. Al
-            // guardar se activa (el payload manda active: true siempre), y
-            // más vale que quien edita lo sepa ANTES de darle a Guardar.
             if (p.active === false) {
                 const cuerpo = document.querySelector('#form-producto .modal-body');
                 const aviso = document.createElement('div');
@@ -2809,7 +2607,6 @@ await cargarGaleria(id, imagenPrincipalExistente);
         _costo.placeholder = '0.00';
         document.getElementById('hint-costo').style.display = 'none';
     }
-    // Compra por bolsa: poblar al editar (o limpiar en alta nueva)
     const chkBolsa = document.getElementById('prod-es-bolsa');
     if (chkBolsa) {
         if (id && window._prodEnEdicion) {
@@ -2818,9 +2615,7 @@ await cargarGaleria(id, imagenPrincipalExistente);
             document.getElementById('prod-piezas-bolsa').value = pe.piezasPorBolsa || '';
             document.getElementById('prod-costo-bolsa').value  = pe.costoBolsa || '';
             document.getElementById('prod-precio-bolsa').value = pe.precioBolsa || '';
-            // El costo por pieza se re-sugiere desde la bolsa (el costo real no
-            // viaja en claro por seguridad). _setupBolsaUI lo recalcula solo.
-        } else {
+             } else {
             chkBolsa.checked = false;
             document.getElementById('prod-piezas-bolsa').value = '';
             document.getElementById('prod-costo-bolsa').value  = '';
@@ -2832,15 +2627,10 @@ await cargarGaleria(id, imagenPrincipalExistente);
     productoModalBS.show();
 }
 
-// ─── CATEGORÍAS ───────────────────────────────────────────────────────────────
 async function cargarCategorias() {
     try {
         flatCategories = await fetchAPI('/categories');
-        // El selector del modal (ssCategoria) ya NO se pinta como árbol de
-        // <ul>: se instancia como buscador la primera vez que se abre el
-        // modal (ver configurarModalProductos). Aquí solo se refrescan sus
-        // items si ya existía.
-        if (ssCategoria) {
+       if (ssCategoria) {
             ssCategoria.setItems(flatCategories.map(c => {
                 const padreId = c.parent?.id ?? c.parentId;
                 const padre = padreId ? flatCategories.find(x => x.id === padreId) : null;
@@ -2890,10 +2680,6 @@ function renderTree(nodos, container, nivel, isModal) {
             ${nodo.name}</a>`;
         li.querySelector('a').onclick = e => {
             e.preventDefault();
-            // La rama "isModal" quedó muerta: el modal de Nuevo/Editar
-            // Producto ya usa ssCategoria (buscador), no este árbol.
-            // renderTree() sigue viva solo para el filtro de la tabla
-            // (el dropdown "Todas las categorías" de arriba del listado).
             categoriaFiltroActual = nodo.id;
             document.getElementById('label-cat-filtro').innerText = nodo.name;
             aplicarFiltros();
@@ -2904,26 +2690,16 @@ function renderTree(nodos, container, nivel, isModal) {
     });
 }
 
-// ─── UTILIDADES ───────────────────────────────────────────────────────────────
-// Espera a que dejes de teclear antes de consultar. Sin esto, escribir
-// "perico" dispararía 6 búsquedas al servidor, una por letra.
 let _timerFiltros = null;
 let filtrosAtributosActivos = [];
 
 function normalizarBusqueda(q) {
-    // Normaliza caracteres que el teclado en español o el lector de código
-    // de barras puede mandar distintos al texto guardado en la base:
-    //   × (U+00D7, signo de multiplicación)  →  x
-    //   ÷ (U+00F7, signo de división)        →  /
-    //   ′ ″ (primas de pulgada/pie)           →  '  "
-    //   comillas tipográficas                 →  ' "
-    //   guión largo/medio                     →  -
     return q
-        .replace(/×/g, 'x')      // × → x
-        .replace(/÷/g, '/')      // ÷ → /
-        .replace(/[′’‘]/g, "'")  // primas y comillas → '
-        .replace(/[″“”]/g, '"')  // dobles primas     → "
-        .replace(/[–—]/g, '-')        // guión largo/medio → -
+        .replace(/×/g, 'x')     
+        .replace(/÷/g, '/')      
+        .replace(/[′’‘]/g, "'")  
+        .replace(/[″“”]/g, '"')  
+        .replace(/[–—]/g, '-')       
         .trim();
 }
 
@@ -2954,8 +2730,7 @@ function aplicarFiltros(inmediato = false) {
     else _timerFiltros = setTimeout(correr, 350);
 }
 
-// Normaliza textos para que la búsqueda no distinga mayúsculas, minúsculas
-// ni acentos.
+
 function normalizarTextoBusqueda(texto) {
     return String(texto ?? '')
         .normalize('NFD')
@@ -2973,9 +2748,7 @@ function normalizarTextoBusqueda(texto) {
         .trim();
 }
 
-// ─── BUSCADOR MÚLTIPLE POR ATRIBUTOS ──────────────────────────────────────────
-// Permite seleccionar una plantilla y combinar varios atributos con AND.
-// Ejemplo: diámetro=1/4 + largo=1 + material=acero.
+
 function inicializarBuscadorAtributos() {
     const selectPlantilla = document.getElementById('filtro-plantilla-atributo');
     const btnAgregar = document.getElementById('btn-agregar-filtro-atributo');
@@ -3020,8 +2793,7 @@ function inicializarBuscadorAtributos() {
             `;
         }
 
-        // Agrega automáticamente el primer campo para que el usuario pueda
-        // comenzar a escribir inmediatamente.
+        
         if (tpl?.campos?.length) agregarFiltroAtributo();
 
         aplicarFiltros(true);
@@ -3135,7 +2907,6 @@ function renderizarFiltrosAtributos() {
             const filtro = filtrosAtributosActivos.find(f => f.id === id);
             if (!filtro) return;
 
-            // No permitimos dos filas con el mismo atributo.
             const repetido = filtrosAtributosActivos.some(
                 f => f.id !== id && f.clave === e.target.value
             );
@@ -3211,9 +2982,7 @@ function agregarFilaAtributo(k='', v='') {
                 <i class="bi bi-trash"></i>
             </button>
         </div>`;
-    // ⇄ : '1"' → '1" (25.4 mm)' · '12 mm' → '12 mm (15/32")'
-    // Así el buscador por medidas encuentra el producto con CUALQUIER unidad
-    // como coincidencia EXACTA. Necesita que el valor traiga unidad (mm o ").
+    
     div.querySelector('.btn-dual').addEventListener('click', () => {
         const inp = div.querySelector('.attr-v');
         if (/\(.*\)/.test(inp.value)) return;          // ya es dual
@@ -3228,7 +2997,6 @@ function agregarFilaAtributo(k='', v='') {
     lista.appendChild(div);
 }
 
-// ─── RESTOCK ──────────────────────────────────────────────────────────────────
 let restockProdId     = null;
 let restockProdModalBS = null;
 
@@ -3328,11 +3096,10 @@ function agregarModalRestock() {
 }
 
 let _restockEsDecimal    = false;
-let _restockCostoActual  = null;  // costo vigente del producto (para validar)
-let _restockPrecioActual = null;  // precio vigente del producto
+let _restockCostoActual  = null; 
+let _restockPrecioActual = null; 
 
 
-// Configura el bloque "surtir bolsas" del modal de restock según el producto.
 let _restockPiezasPorBolsa = 0;
 function _setupRestockBolsa(prod) {
     const bloque = document.getElementById('restock-bloque-bolsa');
@@ -3344,7 +3111,7 @@ function _setupRestockBolsa(prod) {
     const cantEl = document.getElementById('restock-prod-cantidad');
     if (!bloque) return;
 
-    if (!prod) {                 // producto normal: ocultar todo el bloque
+    if (!prod) {                
         bloque.style.display = 'none';
         _restockPiezasPorBolsa = 0;
         return;
@@ -3370,8 +3137,6 @@ function _setupRestockBolsa(prod) {
     };
     const toggle = () => {
         campos.style.display = chk.checked ? '' : 'none';
-        // Si surte por bolsas, el campo de cantidad manual se vuelve de solo
-        // lectura (lo llena el cálculo). Si desmarca, captura piezas a mano.
         cantEl.readOnly = chk.checked;
         if (chk.checked) recalc();
         else { cantEl.readOnly = false; cantEl.value = ''; }
@@ -3394,10 +3159,7 @@ window.abrirRestock = async (productId, nombre, stockActual, precio, satClaveUni
         `Stock actual: ${stockActual} ${etq}${_restockEsDecimal
             ? ' · Acepta fracciones' : ' · Solo enteros'}`;
 
-    // Precargar los datos ACTUALES del producto en el modal.
-    // Nota: el costo NO se precarga ni se muestra — por diseño, el backend
-    // no lo expone al vendedor (ver ProductFullDetailsDTO); la validación de
-    // "precio por debajo del costo" la hace el servidor, que sí lo conoce.
+    
     _restockPrecioActual = precio != null ? Number(precio) : null;
     let ubicacionActual = '';
     let prodBolsa = null;
@@ -3406,9 +3168,9 @@ window.abrirRestock = async (productId, nombre, stockActual, precio, satClaveUni
         if (prod.price != null) _restockPrecioActual = Number(prod.price);
         ubicacionActual = prod.locationRack || '';
         if (prod.compraPorBolsa && prod.piezasPorBolsa) prodBolsa = prod;
-    } catch (e) { /* si falla, se precarga con lo que se tiene */ }
+    } catch (e) {  }
 
-    // ── Modo BOLSA: configurar el bloque si el producto se compra en bolsa ──
+    
     _setupRestockBolsa(prodBolsa);
 
     document.getElementById('restock-prod-info').textContent =
@@ -3416,7 +3178,6 @@ window.abrirRestock = async (productId, nombre, stockActual, precio, satClaveUni
         + (_restockPrecioActual != null ? ` · Precio actual: $${_restockPrecioActual.toFixed(2)}` : '')
         + (ubicacionActual ? ` · Ubicación: ${ubicacionActual}` : '');
 
-    // Campos PRECARGADOS con los valores vigentes (editables)
     const precioEl = document.getElementById('restock-prod-precio');
     precioEl.value = _restockPrecioActual != null ? _restockPrecioActual.toFixed(2) : '';
     const ubicEl = document.getElementById('restock-prod-ubicacion');
@@ -3429,7 +3190,7 @@ window.abrirRestock = async (productId, nombre, stockActual, precio, satClaveUni
     cantInput.value = '';
 
     const costoEl = document.getElementById('restock-prod-costo');
-    costoEl.value = '';   // el costo nunca se precarga (no se expone al vendedor)
+    costoEl.value = '';   
     ['restock-prod-costo','restock-prod-precio','restock-prod-ubicacion']
         .forEach(id => document.getElementById(id)?.classList.remove('is-invalid','is-valid'));
     cantInput.classList.remove('is-invalid','is-valid');
@@ -3468,11 +3229,7 @@ async function confirmarRestockProducto() {
         Swal.fire('Precio inválido', 'El precio debe ser mayor a $0.', 'warning');
         return;
     }
-    // ── VALIDACIÓN COMPLETA: se comparan los valores FINALES, es decir,
-    // el que se escribió o —si el campo quedó vacío— el vigente del producto.
-    // Antes solo validaba cuando escribías AMBOS campos, y dejaba pasar
-    // un precio nuevo por debajo del costo actual (o viceversa).
-    // Cantidades enormes suelen ser dedazos (9910 en vez de 991)
+    
     if (cantidad >= 1000) {
         const r = await Swal.fire({
             icon: 'question', title: '¿Cantidad tan grande?',
@@ -3483,7 +3240,6 @@ async function confirmarRestockProducto() {
         if (!r.isConfirmed) return;
     }
 
-    // Cambio de precio drástico (posible dedazo: $999 → $99)
     if (precioVal && _restockPrecioActual != null) {
         const nuevoP = parseFloat(precioVal);
         if (nuevoP < _restockPrecioActual * 0.5 || nuevoP > _restockPrecioActual * 3) {
@@ -3525,8 +3281,7 @@ async function confirmarRestockProducto() {
         if (!r.isConfirmed) return;
     }
 
-    // Los campos vienen PRECARGADOS: si no cambiaron, no se envían
-    // (evita "actualizaciones" fantasma de precio/ubicación)
+    
     const precioNum = precioVal ? parseFloat(precioVal) : null;
     const precioCambio = precioNum != null &&
         (_restockPrecioActual == null || Math.abs(precioNum - _restockPrecioActual) > 0.009);
@@ -3548,8 +3303,7 @@ async function confirmarRestockProducto() {
             await fetchAPI(`/inventory/${restockProdId}`,
                 { method:'POST', body:payload });
         } catch (e) {
-            // El backend valida contra el costo REAL (que no se muestra aquí).
-            // Si rechazó por pérdida, se pregunta y se reenvía con permiso.
+            
             if ((e.message || '').includes('PRECIO_BAJO_COSTO')
                 || (e.message || '').includes('por debajo del costo')) {
                 const r = await Swal.fire({
@@ -3570,28 +3324,22 @@ async function confirmarRestockProducto() {
             } else { throw e; }
         }
         restockProdModalBS.hide();
-        // El catalogo en memoria acaba de quedar viejo: cambio el stock (y tal
-        // vez el precio). Sin esto, "Ver todo el catalogo" seguia mostrando las
-        // existencias de ANTES de surtir.
+        
         catalogoCache = null;
-        // Mensaje claro: si fue por bolsas, dice cuántas bolsas y piezas
         const chkB = document.getElementById('restock-por-bolsa');
         const numBolsas = parseInt(document.getElementById('restock-num-bolsas')?.value) || 0;
         let msgOk = 'Stock actualizado';
         if (chkB && chkB.checked && numBolsas > 0 && _restockPiezasPorBolsa > 0) {
             msgOk = numBolsas + ' bolsa(s) = +' + (numBolsas * _restockPiezasPorBolsa) + ' piezas';
         }
-        // Refrescar la vista desde donde se abrió el modal:
-        // en Productos existe aplicarFiltros; desde el Dashboard se usa el hook.
+        
         try { aplicarFiltros(); } catch (e) { /* no estamos en Productos */ }
         if (typeof window.onRestockSuccess === 'function') {
             try { window.onRestockSuccess(); } catch (e) {}
         }
-        // El producto pudo salir de faltantes → actualizar badge del sidebar
         if (typeof window.refrescarBadges === 'function') window.refrescarBadges();
 
-        // Ofrecer etiqueta con los datos YA actualizados (el costo pudo
-        // cambiar en este mismo reabasto) — se trae fresco del servidor.
+        
         let productoFresco = null;
         try { productoFresco = await fetchAPI(`/products/${restockProdId}`); } catch (e) {}
 
@@ -3619,7 +3367,6 @@ async function confirmarRestockProducto() {
     }
 }
 
-// abrirAjuste — desde vista faltantes
 window.abrirAjuste = (id, nombre, stockActual, precio, satClaveUnidad) =>
     window.abrirRestock(id, nombre, stockActual, precio, satClaveUnidad);
 
@@ -3627,10 +3374,7 @@ window.editarProducto  = (id) => abrirModal(id);
 window.verFichaProducto = (id) => mostrarFichaProducto(id);
 
 window.eliminarProducto = async (id, active) => {
-    // Producto ACTIVO  → solo se ofrece desactivarlo.
-    // Producto INACTIVO → se ofrece reactivarlo o borrarlo DE VERDAD.
-    // Ese orden es a proposito: obliga a pasar por "desactivado" antes de
-    // poder borrar, asi nadie fulmina un producto de un solo clic distraido.
+    
     const r = await Swal.fire({
         title: active ? '¿Desactivar producto?' : '¿Activar producto?',
         html:  active
@@ -3652,12 +3396,9 @@ window.eliminarProducto = async (id, active) => {
 
     try {
         if (active) {
-            // Desactivar: el DELETE del backend hace setActive(false)
             await fetchAPI(`/products/${id}`, { method: 'DELETE' });
         } else {
-            // Activar: el DELETE solo sabe desactivar, nunca activar.
-            // El endpoint correcto es el masivo (PATCH /estado-masivo)
-            // que acepta un array de ids y el valor de activo que queremos.
+            
             await fetchAPI('/products/estado-masivo', {
                 method: 'PATCH',
                 body: { ids: [id], activo: true }
@@ -3669,26 +3410,15 @@ window.eliminarProducto = async (id, active) => {
     } catch (e) { Swal.fire('Error', e.message, 'error'); }
 };
 
-// ─── BORRADO DEFINITIVO ───────────────────────────────────────────────────────
-// Esto SI borra el renglon de la base de datos. No hay deshacer.
-//
-// Por que no se puede borrar cualquier producto:
-// si el producto ya se vendio, su renglon esta amarrado a sale_items, y esos
-// renglones son parte de ventas ya hechas — algunas ya timbradas ante el SAT,
-// que hay obligacion de conservar. Borrar el producto rompe esas ventas.
-// Por eso el BACKEND es quien decide: si tiene historial, debe negarse.
-// Aqui solo se pide la confirmacion y se muestra lo que el servidor conteste.
+
 async function borrarProductoDefinitivo(id) {
-    // Se trae el producto para poder mostrar su nombre y pedir el SKU.
     let prod = null;
     try { prod = await fetchAPI(`/products/${id}`); }
     catch (e) { Swal.fire('Error', 'No se pudo leer el producto.', 'error'); return; }
 
     const sku = (prod.sku || '').toUpperCase();
 
-    // Se pide TECLEAR el SKU. Es friccion a proposito: un "¿esta seguro?"
-    // se contesta que si en automatico; teclear el codigo obliga a mirar
-    // cual producto es el que esta a punto de desaparecer.
+    
     const r = await Swal.fire({
         icon: 'warning',
         title: 'Borrar para siempre',
@@ -3737,9 +3467,7 @@ async function borrarProductoDefinitivo(id) {
         Swal.fire({ icon:'success', title:'Producto borrado',
             timer:1600, showConfirmButton:false });
     } catch (e) {
-        // Si el endpoint todavia no existe en el backend, fetchAPI traduce el
-        // 404 a "El recurso solicitado no existe". Ese mensaje suena a que el
-        // PRODUCTO no existe, y confunde — asi que se aclara.
+        
         const msg = e.message || '';
         const faltaEndpoint = /no existe en el servidor|404/i.test(msg);
         Swal.fire({
@@ -3755,22 +3483,6 @@ async function borrarProductoDefinitivo(id) {
     }
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-//  AJUSTE DE EXISTENCIAS
-//
-//  Para cuando el sistema dice 10 y en el anaquel hay 7. Sirve para BAJAR y
-//  para subir — es lo que le faltaba al modal de "Agregar stock", que solo
-//  suma.
-//
-//  Se pide la cantidad REAL contada, no la diferencia. Es a proposito: quien
-//  esta frente al anaquel cuenta piezas ("hay 7"), no calcula restas ("quita
-//  3"). Pedirle la resta es pedirle una cuenta de cabeza, y ahi se equivoca.
-//
-//  El MOTIVO es obligatorio. No es burocracia: poder bajar el stock sin dejar
-//  rastro seria la forma mas limpia de tapar un robo. Con el motivo y el
-//  usuario guardados, a fin de mes se puede ver cuanto se fue en mermas y
-//  quien esta ajustando de mas.
-// ═════════════════════════════════════════════════════════════════════════════
 
 const MOTIVOS_AJUSTE = {
     CONTEO_FISICO:        'Conteo fisico (recuento de anaquel)',
@@ -3830,9 +3542,7 @@ window.abrirAjusteStock = async (id, nombre, stockActual, satClaveUnidad) => {
         didOpen: () => {
             const cant = document.getElementById('ajuste-cantidad');
             const dif  = document.getElementById('ajuste-diferencia');
-            // Se muestra la diferencia EN VIVO: es la comprobacion de que el
-            // numero que tecleo es el que queria. Un dedazo (70 en vez de 7)
-            // se ve al instante como "sobran 60".
+            
             cant.addEventListener('input', () => {
                 const v = parseFloat(cant.value);
                 if (isNaN(v)) { dif.innerHTML = ''; return; }
@@ -3879,8 +3589,7 @@ window.abrirAjusteStock = async (id, nombre, stockActual, satClaveUnidad) => {
     });
     if (!r.isConfirmed) return;
 
-    // Un faltante grande se confirma dos veces. Bajar 200 piezas de un jalon
-    // no deberia ser tan facil como bajar 2.
+   
     const perdida = stockActual - r.value.cantidadReal;
     if (perdida > 0 && (perdida >= 50 || (stockActual > 0 && perdida / stockActual >= 0.5))) {
         const c = await Swal.fire({

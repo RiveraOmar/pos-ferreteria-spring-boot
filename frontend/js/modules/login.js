@@ -1,10 +1,5 @@
 import { iniciarSesion } from '../config.js';
 
-// ══════════════════════════════════════════════════════════════════════════════
-// PANTALLA DE LOGIN
-// Se muestra a pantalla completa cuando no hay sesión. Al entrar bien, llama al
-// callback onLogin() para arrancar el sistema.
-// ══════════════════════════════════════════════════════════════════════════════
 
 export function mostrarLogin(onLogin) {
     document.body.innerHTML = `

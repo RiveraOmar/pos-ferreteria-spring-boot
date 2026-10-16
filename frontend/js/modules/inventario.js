@@ -3,12 +3,6 @@ import { initCatalogosBaterias } from './catalogoBateria.js';
 import { initCatalogoBirlos } from './catalogoBirlos.js';
 import { initCatalogoAuto } from './catalogoAuto.js';
 
-// ══════════════════════════════════════════════════════════════════════════════
-// CATÁLOGOS DE REFERENCIA
-// Las Categorías se movieron al módulo Productos (pestaña "Categorías"),
-// junto a los productos que clasifican. Aquí quedan los catálogos técnicos.
-// Cada pestaña carga su contenido la primera vez que se abre (lazy).
-// ══════════════════════════════════════════════════════════════════════════════
 
 export function initInventario(container) {
     container.innerHTML = `
@@ -38,7 +32,6 @@ export function initInventario(container) {
             <div id="inv-tab-auto" class="d-none"></div>
         </div>`;
 
-    // Carga perezosa: cada pestaña se inicializa solo la primera vez
     const cargado = {};
     const mostrar = (tab) => {
         ['filtros', 'baterias', 'birlos', 'auto'].forEach(t =>
