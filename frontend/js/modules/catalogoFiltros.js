@@ -113,7 +113,6 @@ export function initCatalogos(container) {
     cargarTipos();
 }
 
-// ─── INICIALIZAR SELECTS EN CASCADA ──────────────────────────────────────────
 
 async function cargarTipos() {
     try {
@@ -135,7 +134,6 @@ function inicializarEventos() {
     const selMotor  = document.getElementById('sel-motor');
     const btnBuscar = document.getElementById('btn-buscar-vehiculo');
 
-    // Cascada: Tipo → Marca
     selTipo.addEventListener('change', async () => {
         resetSelect(selMarca);  resetSelect(selAnio);
         resetSelect(selModelo); resetSelect(selMotor);
@@ -148,7 +146,6 @@ function inicializarEventos() {
         } catch (e) { console.error(e); }
     });
 
-    // Cascada: Marca → Año
     selMarca.addEventListener('change', async () => {
         resetSelect(selAnio); resetSelect(selModelo); resetSelect(selMotor);
         btnBuscar.disabled = true;
@@ -161,7 +158,6 @@ function inicializarEventos() {
         } catch (e) { console.error(e); }
     });
 
-    // Cascada: Año → Modelo
     selAnio.addEventListener('change', async () => {
         resetSelect(selModelo); resetSelect(selMotor);
         btnBuscar.disabled = true;
@@ -174,7 +170,6 @@ function inicializarEventos() {
         } catch (e) { console.error(e); }
     });
 
-    // Cascada: Modelo → Motor
     selModelo.addEventListener('change', async () => {
         resetSelect(selMotor);
         btnBuscar.disabled = true;
@@ -187,12 +182,10 @@ function inicializarEventos() {
         } catch (e) { console.error(e); }
     });
 
-    // Habilitar botón cuando se selecciona motor
     selMotor.addEventListener('change', () => {
         btnBuscar.disabled = !selMotor.value;
     });
 
-    // Buscar por vehículo
     btnBuscar.addEventListener('click', async () => {
         const params = new URLSearchParams({
             tipo:   selTipo.value,
@@ -210,12 +203,10 @@ function inicializarEventos() {
         }
     });
 
-    // Búsqueda dinámica
     const inputDinamico = document.getElementById('input-dinamico');
     document.getElementById('btn-buscar-dinamico').addEventListener('click', () => buscarDinamico());
     inputDinamico.addEventListener('keydown', (e) => { if (e.key === 'Enter') buscarDinamico(); });
 
-    // Búsqueda por equivalente
     const inputEquiv = document.getElementById('input-equivalente');
     document.getElementById('btn-buscar-equiv').addEventListener('click', () => buscarEquivalente());
     inputEquiv.addEventListener('keydown', (e) => { if (e.key === 'Enter') buscarEquivalente(); });
@@ -245,7 +236,6 @@ async function buscarEquivalente() {
     } catch (e) { mostrarError(e.message); }
 }
 
-// ─── RENDER DE RESULTADOS ────────────────────────────────────────────────────
 
 function mostrarResultados(resultados, titulo) {
     const contenedor = document.getElementById('resultados-catalogo');
@@ -337,7 +327,6 @@ function mostrarError(msg) {
         </div>`;
 }
 
-// ─── UTILIDADES ──────────────────────────────────────────────────────────────
 
 function poblarSelect(sel, valores) {
     sel.innerHTML = `<option value="">— Selecciona —</option>`;

@@ -1,24 +1,8 @@
-// ═════════════════════════════════════════════════════════════════════════════
-//  CATÁLOGO DE BIRLOS — Internacionales León
-//  543 especificaciones · 1,169 aplicaciones · 10 marcas
-//
-//  Tres búsquedas, como en el mostrador:
-//   1) Por VEHÍCULO: "¿qué birlo lleva un Tsuru?" → marca + modelo
-//   2) Por MEDIDA:   "mide 14.3 de estría"        → Ø en mm O pulgadas
-//   3) Por CÓDIGO:   clic en cualquier código      → ficha + aplicaciones
-// ═════════════════════════════════════════════════════════════════════════════
+
 import { fetchAPI } from '../services/api.js';
 import { parseMedida } from '../services/plantillasmedidas.js';
 
 
-// Escapa un texto que va DENTRO de un onclick="...('AQUI')".
-// Ahi conviven dos lenguajes: el atributo HTML lo delimita " y la cadena de
-// JavaScript la delimita '. Hay que escapar para los DOS, en este orden:
-//   1. la barra invertida, o los escapes de abajo se rompen entre si
-//   2. la comilla simple con \' — escape de JAVASCRIPT
-//   3. y hasta el final el HTML: & " < >
-// La comilla simple NO se pasa a &#39; a proposito: el navegador la
-// decodificaria de vuelta y cerraria la cadena de JS a media instruccion.
 function escAttr(s) {
     return String(s ?? '')
         .replace(/\\/g, '\\\\')
@@ -29,8 +13,6 @@ function escAttr(s) {
         .replace(/>/g, '&gt;');
 }
 
-// Lámina del catálogo impreso (con el dibujo y TODAS las medidas del birlo).
-// Las imágenes van en: PuntoDeVentaFront/img/catalogo-birlos/pag-N.jpg
 function verLamina(pagina, codigo) {
     if (!pagina) return;
     const url = 'img/catalogo-birlos/pag-' + pagina + '.jpg';
@@ -109,7 +91,6 @@ export function initCatalogoBirlos(container) {
             </div>
         </div>`;
 
-    // Marcas
     fetchAPI('/catalogo-birlos/marcas').then(marcas => {
         const sel = document.getElementById('bir-marca');
         marcas.forEach(m => {
@@ -119,7 +100,6 @@ export function initCatalogoBirlos(container) {
         });
     }).catch(() => {});
 
-    // Eventos (con pausa breve al teclear)
     let t = null;
     const alTeclear = fn => () => { clearTimeout(t); t = setTimeout(fn, 350); };
     document.getElementById('bir-marca').addEventListener('change', buscarPorVehiculo);
@@ -128,7 +108,6 @@ export function initCatalogoBirlos(container) {
     document.getElementById('bir-rosca').addEventListener('input', alTeclear(buscarPorMedida));
 }
 
-// ─── 1) POR VEHÍCULO ─────────────────────────────────────────────────────────
 async function buscarPorVehiculo() {
     const marca  = document.getElementById('bir-marca').value;
     const modelo = document.getElementById('bir-modelo').value.trim();
@@ -186,19 +165,15 @@ async function buscarPorVehiculo() {
     }
 }
 
-// ─── 2) POR MEDIDA (mm O pulgadas, con fracciones) ───────────────────────────
 async function buscarPorMedida() {
     const estriaTxt = document.getElementById('bir-estria').value.trim();
     const rosca     = document.getElementById('bir-rosca').value.trim();
     if (!estriaTxt && rosca.length < 2) return;
 
-    // El campo acepta "14.3", "14.3 mm", '9/16"', "0.563" —
-    // parseMedida (el mismo del buscador de productos) resuelve la unidad.
-    let mm = '';
+   let mm = '';
     if (estriaTxt) {
         const m = parseMedida(estriaTxt);
         if (!m) return;
-        // sin unidad: los valores chicos (<2) casi seguro son pulgadas
         const esPulg = m.unidad === 'in' || (m.unidad === null && m.valor < 2);
         mm = (esPulg ? m.valor * 25.4 : m.valor).toFixed(2);
     }
@@ -255,7 +230,6 @@ async function buscarPorMedida() {
     }
 }
 
-// ─── 3) FICHA DE CÓDIGO (modal: especificación + aplicaciones) ───────────────
 function activarLinksCodigo() {
     document.querySelectorAll('.bir-foto').forEach(b =>
         b.addEventListener('click', e => {
@@ -310,6 +284,6 @@ function activarLinksCodigo() {
                     </div>`,
                     confirmButtonText: 'Cerrar'
                 });
-            } catch (err) { /* silencioso */ }
+            } catch (err) {  }
         }));
 }

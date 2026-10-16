@@ -2,15 +2,6 @@ import { fetchAPI } from '../services/api.js';
 import { fmtFecha, hoyISO } from '../services/fechas.js';
 
 
-// Escapa un texto que va DENTRO de un onclick="...('AQUI')".
-// Ahi conviven dos lenguajes y cada uno tiene su comilla: el atributo HTML
-// esta delimitado por " y la cadena de JavaScript por '. Por eso hay que
-// escapar para LOS DOS, en este orden:
-//   1. la barra invertida, o los escapes de abajo se rompen entre si
-//   2. la comilla simple, con \' — es escape de JAVASCRIPT
-//   3. y hasta el final el HTML: & " < >
-// La comilla simple NO se convierte a &#39; a proposito: el navegador la
-// decodificaria de vuelta a ' y cerraria la cadena de JS a media instruccion.
 function escAttr(s) {
     return String(s ?? '')
         .replace(/\\/g, '\\\\')
@@ -22,7 +13,6 @@ function escAttr(s) {
 }
 
 export function initHistorial(container) {
-    // hoyISO() devuelve string "YYYY-MM-DD" directamente
     const hoy = hoyISO();
 
     container.innerHTML = `
@@ -154,7 +144,6 @@ export function initHistorial(container) {
     cargarHistorial();
 }
 
-// ─── CARGAR HISTORIAL ─────────────────────────────────────────────────────────
 
 async function cargarHistorial() {
     const tbody = document.getElementById('tabla-historial-body');
@@ -198,9 +187,7 @@ function limpiarFiltros() {
     cargarHistorial();
 }
 
-// ─── RESUMEN KPIs ─────────────────────────────────────────────────────────────
 
-// Lo que se está mostrando ahora mismo (para exportar exactamente eso)
 let ventasMostradas = [];
 
 function actualizarResumen(ventas) {
@@ -224,10 +211,6 @@ function actualizarResumen(ventas) {
         `$${promedio.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
 }
 
-// ─── EXPORTAR ─────────────────────────────────────────────────────────────────
-// Descarga EXACTAMENTE lo que estás viendo (con los filtros aplicados), en un
-// CSV que Excel en español abre en columnas y con los acentos correctos.
-// Pensado para mandárselo al contador sin tener que capturar nada a mano.
 function exportarHistorialCSV() {
     if (!ventasMostradas.length) return;
 
@@ -255,7 +238,6 @@ function exportarHistorialCSV() {
         ]);
     });
 
-    // Fila de totales al final: solo lo que de verdad se cobró
     const validas = ventasMostradas.filter(v =>
         !String(v.status || '').toUpperCase().includes('CANCEL'));
     const sumTotal = validas.reduce((s, v) => s + (Number(v.totalAmount) || 0), 0);
@@ -264,7 +246,6 @@ function exportarHistorialCSV() {
     filas.push(['', '', '', '', '', '', 'TOTAL (sin canceladas)',
         (sumTotal - sumIva).toFixed(2), sumIva.toFixed(2), sumTotal.toFixed(2)]);
 
-    // Punto y coma + BOM: así Excel en español lo abre bien y respeta acentos
     const csv = filas
         .map(f => f.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';'))
         .join('\n');
@@ -282,7 +263,6 @@ function exportarHistorialCSV() {
     window.mostrarToast?.(`${ventasMostradas.length} ventas exportadas`, 'success');
 }
 
-// ─── TABLA ────────────────────────────────────────────────────────────────────
 
 function renderTabla(ventas) {
     const tbody = document.getElementById('tabla-historial-body');
@@ -302,7 +282,7 @@ function renderTabla(ventas) {
     };
 
     tbody.innerHTML = ventas.map(v => {
-        const fecha       = fmtFecha(v.createdAt); // ← usa utilidad de zona horaria
+        const fecha       = fmtFecha(v.createdAt); 
         const esCancelada = v.status === 'CANCELLED';
         const esDeuda     = v.paymentMethod === 'DEUDA';
 
@@ -352,7 +332,6 @@ function renderTabla(ventas) {
     }).join('');
 }
 
-// ─── VER DETALLE ──────────────────────────────────────────────────────────────
 
 window.verDetalleVenta = async (id) => {
     Swal.fire({
@@ -448,7 +427,6 @@ window.verDetalleVenta = async (id) => {
     } catch (e) { Swal.fire('Error', e.message, 'error'); }
 };
 
-// ─── CANCELAR VENTA ───────────────────────────────────────────────────────────
 
 window.cancelarVenta = async (id, folio) => {
     const result = await Swal.fire({
@@ -482,7 +460,6 @@ window.cancelarVenta = async (id, folio) => {
     } catch (e) { Swal.fire('Error', e.message, 'error'); }
 };
 
-// ─── REIMPRIMIR ───────────────────────────────────────────────────────────────
 
 function reimprimirTicket(venta) {
     const fecha = fmtFecha(venta.createdAt);
@@ -664,16 +641,14 @@ window.onload=function(){
 
     w.document.close();
 }
-// ─── TIMBRAR / VER CFDI DESDE HISTORIAL ──────────────────────────────────────
 window.timbrarVentaHistorial = async (saleId, invoiceNumber) => {
-    // Primero verificar si ya tiene CFDI timbrado
     let cfdiExistente = null;
     try {
         cfdiExistente = await fetchAPI(`/cfdi/venta/${saleId}`);
-    } catch (e) { /* no tiene CFDI aún */ }
+    } catch (e) { }
 
     if (cfdiExistente && cfdiExistente.uuid) {
-        // Ya tiene CFDI — mostrar opciones
+        
         const r = await Swal.fire({
             title: `<i class="bi bi-receipt-cutoff me-2 text-success"></i>CFDI Timbrado`,
             html: `
@@ -703,7 +678,6 @@ window.timbrarVentaHistorial = async (saleId, invoiceNumber) => {
         });
 
         if (r.isConfirmed && cfdiExistente.pdfBase64) {
-            // Descargar PDF
             const link = document.createElement('a');
             link.href = `data:application/pdf;base64,${cfdiExistente.pdfBase64}`;
             link.download = `CFDI-${invoiceNumber}.pdf`;
@@ -714,7 +688,6 @@ window.timbrarVentaHistorial = async (saleId, invoiceNumber) => {
         return;
     }
 
-    // No tiene CFDI — confirmar timbrado
     const conf = await Swal.fire({
         title: `Facturar venta ${invoiceNumber}`,
         html: `<p class="text-muted">Se generará un CFDI 4.0 y se timbrará con el SAT via FEL Premium.</p>
@@ -728,7 +701,6 @@ window.timbrarVentaHistorial = async (saleId, invoiceNumber) => {
 
     if (!conf.isConfirmed) return;
 
-    // Mostrar spinner
     Swal.fire({
         title: 'Timbrando con el SAT...',
         html: '<div class="spinner-border text-primary"></div><p class="mt-2 text-muted small">Esto puede tardar unos segundos</p>',

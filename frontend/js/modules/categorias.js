@@ -1,15 +1,6 @@
 import { fetchAPI } from '../services/api.js';
 
 
-// Escapa un texto que va DENTRO de un onclick="...('AQUI')".
-// Ahi conviven dos lenguajes y cada uno tiene su comilla: el atributo HTML
-// esta delimitado por " y la cadena de JavaScript por '. Por eso hay que
-// escapar para LOS DOS, en este orden:
-//   1. la barra invertida, o los escapes de abajo se rompen entre si
-//   2. la comilla simple, con \' — es escape de JAVASCRIPT
-//   3. y hasta el final el HTML: & " < >
-// La comilla simple NO se convierte a &#39; a proposito: el navegador la
-// decodificaria de vuelta a ' y cerraria la cadena de JS a media instruccion.
 function escAttr(s) {
     return String(s ?? '')
         .replace(/\\/g, '\\\\')
@@ -110,7 +101,6 @@ export function initCategorias(container) {
 
     categoriaModalBS = new bootstrap.Modal(document.getElementById('modalCategoria'));
 
-    // --- EVENTOS ---
     let timeoutBusqueda;
     document.getElementById('input-buscar-categoria').oninput = (e) => {
         clearTimeout(timeoutBusqueda);
@@ -154,7 +144,6 @@ export function initCategorias(container) {
         }
     };
 
-    // --- FUNCIONES GLOBALES ---
     window.irACategoria = (id, nombre) => {
         if (id) {
             currentPath.push({ id, name: nombre });
@@ -178,7 +167,6 @@ export function initCategorias(container) {
 
         if (result.isConfirmed) {
             try {
-                // Enviamos active=false al endpoint de status
                 await fetchAPI(`/categories/${id}/status?active=false`, { method: 'PUT' });
                 Swal.fire('Desactivada', '', 'success');
                 recargarNivelActual();
@@ -202,7 +190,6 @@ export function initCategorias(container) {
     actualizarBreadcrumb();
 }
 
-// --- LOGICA DE DATOS ---
 async function cargarCategoriasRaiz() {
     renderLoading();
     try {
@@ -240,7 +227,6 @@ function recargarNivelActual() {
     else cargarCategoriasRaiz();
 }
 
-// --- RENDERIZADO ---
 function renderizarLista(items) {
     const listaActivas = document.getElementById('lista-categorias-activas');
     const listaInactivas = document.getElementById('lista-categorias-inactivas');
@@ -248,7 +234,6 @@ function renderizarLista(items) {
     listaActivas.innerHTML = '';
     listaInactivas.innerHTML = '';
 
-    // Filtrado robusto basado en el booleano del DTO
     const activas = items.filter(cat => cat.active === true);
     const inactivas = items.filter(cat => cat.active === false);
 

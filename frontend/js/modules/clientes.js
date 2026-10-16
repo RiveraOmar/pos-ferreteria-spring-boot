@@ -1,14 +1,6 @@
 import { fetchAPI } from '../services/api.js';
 
-// Escapa un texto que va DENTRO de un onclick="...('AQUI')".
-// Ahi conviven dos lenguajes y cada uno tiene su comilla: el atributo HTML
-// esta delimitado por " y la cadena de JavaScript por '. Por eso hay que
-// escapar para LOS DOS, en este orden:
-//   1. la barra invertida, o los escapes de abajo se rompen entre si
-//   2. la comilla simple, con \' — es escape de JAVASCRIPT
-//   3. y hasta el final el HTML: & " < >
-// La comilla simple NO se convierte a &#39; a proposito: el navegador la
-// decodificaria de vuelta a ' y cerraria la cadena de JS a media instruccion.
+
 function escAttr(s) {
     return String(s ?? '')
         .replace(/\\/g, '\\\\')
@@ -30,9 +22,7 @@ let regimenes = [];
 let usosCfdi  = [];
 let paises    = [];
 
-// ─── FICHA E INDICADORES ──────────────────────────────────────────────────────
 
-// Facturable REAL: mismos 4 requisitos que valida el timbrado
 function faltantesFiscales(c) {
     const faltan = [];
     if (!c.rfc || c.rfc === 'XAXX010101000') faltan.push('RFC');
@@ -42,8 +32,6 @@ function faltantesFiscales(c) {
     return faltan;
 }
 
-// Descripciones desde los catálogos SAT ya cargados del backend.
-// Llegan como pares [clave, descripción] (ver poblarSelect más abajo).
 const buscarEnCatalogo = (catalogo, clave) => {
     const r = (catalogo || []).find(x =>
         (Array.isArray(x) ? x[0] : (x.clave || x.id)) == clave);
@@ -59,7 +47,6 @@ const filaDato = (etiqueta, valor) => `
         <span class="small fw-bold text-end" style="max-width:60%">${valor || '—'}</span>
     </div>`;
 
-// Modal de INSPECCIÓN: todos los datos del cliente + su saldo en la Libreta
 window.verFichaCliente = async (id) => {
     Swal.fire({ title: 'Cargando ficha...', showConfirmButton: false,
         allowOutsideClick: false,
@@ -67,7 +54,6 @@ window.verFichaCliente = async (id) => {
     try {
         const c = await fetchAPI(`/customers/${id}`);
 
-        // Saldo actual en la Libreta de Deudas
         let deudaHtml = '';
         try {
             const deudas = await fetchAPI(`/debts/customer/${id}`);
@@ -84,7 +70,7 @@ window.verFichaCliente = async (id) => {
                    </div>`
                 : `<div class="alert alert-success py-2 mb-2">
                        <i class="bi bi-check-circle me-1"></i>Sin deudas pendientes</div>`;
-        } catch (e) { /* módulo de deudas no disponible */ }
+        } catch (e) {  }
 
         const faltan = faltantesFiscales(c);
         const badgeFiscal = !faltan.length
@@ -148,7 +134,6 @@ window.verFichaCliente = async (id) => {
     }
 };
 
-// Deep-link a la Libreta de Deudas (mismo mecanismo que el Dashboard)
 window.irALibretaCliente = (clienteId) => {
     sessionStorage.setItem('deudas_abrir_cliente', String(clienteId));
     document.querySelector('#main-menu .nav-link[data-module="deudas"]')?.click();
@@ -388,12 +373,10 @@ export async function initClientes(container) {
             </div>
         </div>`;
 
-    // Poblar selects SAT
     poblarSelect('f-regimenFiscal', regimenes, r => ({ value: r[0], text: `${r[0]} — ${r[1]}` }));
     poblarSelect('f-usoCfdi',       usosCfdi,  r => ({ value: r[0], text: `${r[0]} — ${r[1]}` }));
     poblarSelect('f-satPais',       paises,    r => ({ value: r[0], text: `${r[0]} — ${r[1]}` }));
 
-    // Tabs del modal
     document.querySelectorAll('#tabs-cliente .nav-link').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('#tabs-cliente .nav-link')
@@ -412,13 +395,10 @@ export async function initClientes(container) {
 
     window.mostrandoActivos = true;
 
-    // Exponer aplicarFiltroInput globalmente para oninput en HTML
     window.aplicarFiltroInput = aplicarFiltroInput;
 
-    // Limpiar al cerrar modal
     modalEl.addEventListener('hidden.bs.modal', () => limpiarValidaciones('form-cliente'));
 
-    // Búsqueda con debounce
     let timeoutBusqueda;
     inputBusqueda.addEventListener('input', (e) => {
         clearTimeout(timeoutBusqueda);
@@ -457,9 +437,6 @@ export async function initClientes(container) {
     cargarClientes();
 }
 
-// ─── SELECCIÓN MÚLTIPLE — dar de baja varios clientes de un jalón ────────────
-// El cliente "Público General" (id 1) nunca aparece con checkbox — misma
-// protección que ya tiene la tabla contra editarlo/eliminarlo uno por uno.
 function configurarSeleccionMultipleClientes() {
     const tabla = document.getElementById('tabla-clientes-body');
     const barra = document.getElementById('cli-barra-seleccion');
@@ -501,7 +478,6 @@ function configurarSeleccionMultipleClientes() {
     });
 }
 
-// ─── UTILIDADES ───────────────────────────────────────────────────────────────
 function poblarSelect(id, datos, mapper) {
     const sel = document.getElementById(id);
     if (!sel) return;
@@ -521,7 +497,6 @@ function resetTabs() {
         p.style.display = i === 0 ? 'block' : 'none');
 }
 
-// ─── CARGAR Y RENDERIZAR ──────────────────────────────────────────────────────
 async function cargarClientes() {
     try {
         const clientes = await fetchAPI(`/customers?active=${window.mostrandoActivos}`);
@@ -556,7 +531,6 @@ function renderizarTabla(clientes) {
     tbody.innerHTML = clientes.map(c => {
         const esPublico = (c.id === 1 || c.id === '1');
 
-        // Facturable REAL (los 4 requisitos del timbrado), con tooltip de lo que falta
         const faltan = faltantesFiscales(c);
         const fiscalBadge = !faltan.length
             ? `<span class="badge bg-success-subtle text-success border small"
@@ -626,7 +600,6 @@ function renderizarTabla(clientes) {
     }).join('');
 }
 
-// ─── CARGAR PARA EDITAR ───────────────────────────────────────────────────────
 async function cargarDatosCliente(id, modal) {
     if (id === 1 || id === '1') {
         Swal.fire('Protegido', 'Este cliente no puede ser editado.', 'info'); return;
@@ -656,12 +629,10 @@ async function cargarDatosCliente(id, modal) {
     } catch (e) { Swal.fire('Error', e.message, 'error'); }
 }
 
-// ─── GUARDAR CON VALIDACIONES COMPLETAS ──────────────────────────────────────
 async function guardarCliente(e, modal) {
     e.preventDefault();
     limpiarValidaciones('form-cliente');
 
-    // ── Pestaña General ──────────────────────────────────────────────────────
     const nombreOk  = validarTexto('f-fullName', {
         label: 'Nombre completo', minLen: 2, maxLen: 300,
         requerido: true, noEspeciales: true
@@ -672,7 +643,6 @@ async function guardarCliente(e, modal) {
     const emailOk   = emailVal ? validarEmail('f-email', false) : true;
     const descOk    = validarDescuento('f-discountRate', false);
 
-    // Ciudad solo letras (opcional)
     const ciudadVal = document.getElementById('f-city').value.trim();
     const ciudadOk  = ciudadVal
         ? validarTexto('f-city', {
@@ -683,7 +653,6 @@ async function guardarCliente(e, modal) {
 
     const erroresGeneral = [nombreOk, rfcOk, telOk, emailOk, descOk, ciudadOk];
 
-    // ── Pestaña SAT ───────────────────────────────────────────────────────────
     const cpVal = document.getElementById('f-codigoPostal').value.trim();
     const cpOk  = cpVal ? validarCodigoPostal('f-codigoPostal', false) : true;
 
@@ -696,7 +665,6 @@ async function guardarCliente(e, modal) {
 
     const erroresFiscal = [cpOk, razonOk];
 
-    // Si hay error en fiscal → mostrar esa pestaña
     if (!erroresFiscal.every(Boolean)) {
         document.querySelectorAll('#tabs-cliente .nav-link')
             .forEach(b => b.classList.remove('active'));
@@ -751,7 +719,6 @@ async function guardarCliente(e, modal) {
     }
 }
 
-// ─── ELIMINAR / RESTAURAR ─────────────────────────────────────────────────────
 async function eliminarCliente(id, nombre) {
     if (id === 1 || id === '1') return;
     const r = await Swal.fire({

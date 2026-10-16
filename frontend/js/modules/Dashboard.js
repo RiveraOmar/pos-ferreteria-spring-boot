@@ -3,29 +3,18 @@ import { urlImagenCompleta } from '../services/camara.js';
 import { fmtFecha, hoyISO } from '../services/fechas.js';
 import { mostrarFichaProducto } from '../services/productDetailCard.js';
 
-// Escapa el texto antes de meterlo al HTML. Es lo que impide que un nombre
-// como  Tornillo hexagonal G5 1/4" x 1/2"  rompa la fila: esa comilla doble
-// cerraba el atributo a media instrucción y dejaba el botón muerto.
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g,
     c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
-// ─── ATAJOS CLICKEABLES DEL DASHBOARD ─────────────────────────────────────────
 
-// Click en un producto con stock bajo → abre su ficha (la misma de Productos)
 window.dashVerProducto = (productId) => mostrarFichaProducto(productId);
 
-// Click en la deuda de un cliente → navega a la Libreta y abre SU hoja.
-// Se deja el destino en sessionStorage y se dispara la navegación normal
-// del menú; initDeudas lo detecta y abre la hoja directamente.
 window.dashIrADeuda = (clienteId) => {
     sessionStorage.setItem('deudas_abrir_cliente', String(clienteId));
     document.querySelector('#main-menu .nav-link[data-module="deudas"]')?.click();
 };
 
-// ─── El modal de reabastecer vive en productos.js ───────────────────────────
-// Ese módulo define window.abrirRestock al cargarse. Si alguien entró directo
-// al Dashboard sin pasar por Productos, la función podría no existir todavía.
-// En vez de fallar en silencio, se carga el módulo al vuelo.
+
 async function asegurarRestock() {
     if (typeof window.abrirRestock === 'function') return true;
     try {
@@ -46,36 +35,25 @@ async function asegurarRestock() {
 let dashTimer = null;
 
 export async function initDashboard(container) {
-    // Auto-refresco: mientras el dashboard esté visible, se recarga solo cada
-    // minuto (ventas nuevas, stock, deudas). Al salir del módulo se detiene.
-    clearInterval(dashTimer);
+   clearInterval(dashTimer);
     dashTimer = setInterval(() => {
-        if (!document.getElementById('dash-kpis')) {  // ya no estamos en el dashboard
+        if (!document.getElementById('dash-kpis')) {  
             clearInterval(dashTimer);
             return;
         }
-        // Si la ventana está tapada o minimizada, no tiene caso pedir el
-        // catálogo entero cada minuto: nadie lo está viendo. Con miles de
-        // productos, ese refresco a ciegas es varios MB por hora tirados.
         if (document.hidden) return;
         cargarDashboard();
     }, 60000);
 
     container.innerHTML = renderEsqueleto();
 
-    // ── Clicks de las listas, por DELEGACIÓN ───────────────────────────────
-    // El contenedor se pinta una sola vez; las listas de adentro se repintan
-    // cada minuto. Enganchando aquí, los botones siguen vivos después de cada
-    // repintado sin tener que re-enganchar nada.
-    container.addEventListener('click', async (e) => {
+   container.addEventListener('click', async (e) => {
         const btnAbastecer = e.target.closest('button[data-dash-abastecer]');
         if (btnAbastecer) {
-            e.stopPropagation();          // no abrir la ficha al mismo tiempo
+            e.stopPropagation();         
             const ok = await asegurarRestock();
             if (!ok) return;
-            // Al confirmar el restock, el dashboard se recarga para que el
-            // producto salga de la lista de stock bajo.
-            window.onRestockSuccess = () => cargarDashboard();
+             window.onRestockSuccess = () => cargarDashboard();
             window.abrirRestock(
                 Number(btnAbastecer.dataset.id),
                 btnAbastecer.dataset.nombre,
@@ -192,10 +170,8 @@ function renderEsqueleto() {
 }
 
 async function cargarDashboard() {
-    // hoyISO() devuelve string "YYYY-MM-DD" — NO llamar .toISOString() ni .toLocaleDateString()
     const fechaHoy = hoyISO();
 
-    // Mostrar fecha legible construyendo el Date desde el string ISO (sin zona)
     const [anio, mes, dia] = fechaHoy.split('-').map(Number);
     const fechaDisplay = new Date(anio, mes - 1, dia);
     const elFecha = document.getElementById('dash-fecha');
@@ -205,9 +181,6 @@ async function cargarDashboard() {
         });
     }
 
-    // onclick (asignación) y no addEventListener: cargarDashboard corre cada
-    // minuto por el auto-refresco, y addEventListener apilaría un listener
-    // nuevo en cada pasada.
     const btnRef = document.getElementById('btn-refrescar-dash');
     if (btnRef) btnRef.onclick = () => {
         document.getElementById('dash-kpis').innerHTML = ['','','',''].map(() => `
@@ -225,12 +198,8 @@ async function cargarDashboard() {
     try {
         const [reporte, productos, deudas, ventasHoy] = await Promise.all([
             fetchAPI(`/reports?date=${fechaHoy}`),
-            // /products ya viene filtrado por el backend: solo activos. El
-            // catálogo dormido (los miles del libro de Truper sin comprar)
-            // no llega hasta acá y no infla la lista de stock bajo.
             fetchAPI('/products'),
             fetchAPI('/debts'),
-            // Ventas REALES de hoy con su hora exacta (para la gráfica)
             fetchAPI(`/sales/search?inicio=${fechaHoy}T00:00:00&fin=${fechaHoy}T23:59:59`)
                 .catch(() => [])
         ]);
@@ -306,13 +275,10 @@ function renderKPIs(r) {
         </div>`).join('');
 }
 
-// Gráfica de ventas por hora con DATOS REALES: cada barra es la suma de las
-// ventas registradas en esa hora (antes se "estimaba" con números aleatorios).
 function renderGraficaHoras(ventasHoy) {
     const container = document.getElementById('dash-chart-container');
     if (!container) return;
 
-    // Excluir canceladas y quedarnos con hora + monto de cada venta real
     const ventas = (ventasHoy || []).filter(v =>
         !String(v.status || '').toUpperCase().includes('CANCEL'));
 
@@ -323,17 +289,14 @@ function renderGraficaHoras(ventasHoy) {
         return;
     }
 
-    // Hora de cada venta. El backend serializa fechas como "dd/MM/yyyy HH:mm:ss"
-    // pero se tolera también el formato ISO por si cambia la configuración.
     const horaDe = (v) => {
         const f = String(v.createdAt || '');
-        if (f.includes('T')) return parseInt(f.substring(11, 13), 10);   // ISO
-        const m = f.match(/\b(\d{2}):\d{2}/);                            // dd/MM/yyyy HH:mm
+        if (f.includes('T')) return parseInt(f.substring(11, 13), 10);   
+        const m = f.match(/\b(\d{2}):\d{2}/);                            
         return m ? parseInt(m[1], 10) : null;
     };
 
-    // Acumular monto y número de ventas por hora
-    const porHora = {};
+   const porHora = {};
     let minH = 8, maxH = Math.max(new Date().getHours(), 14);
     ventas.forEach(v => {
         const h = horaDe(v);
@@ -357,8 +320,6 @@ function renderGraficaHoras(ventasHoy) {
     }
     const maxMonto = Math.max(...barras.map(b => b.monto), 1);
 
-    // Alturas en PÍXELES (las alturas en % no se resolvían y las barras
-    // salían invisibles — el segundo bug de esta gráfica)
     const ALTO = 150;
     container.innerHTML = `
         <div style="display:flex;align-items:flex-end;gap:6px;height:${ALTO + 40}px;padding:0 4px">
@@ -416,14 +377,13 @@ function renderTopProductos(r) {
     </ul>`;
 }
 
-let _dashFaltantes = [];   // faltantes en memoria, para filtrar sin re-pedir
+let _dashFaltantes = [];   
 
 function renderStockBajo(productos) {
     _dashFaltantes = productos.filter(p => p.active && p.currentStock <= (p.minStockLevel || 0));
     const badge = document.getElementById('dash-badge-stock');
     if (badge) badge.textContent = _dashFaltantes.length;
 
-    // Enganchar el buscador (una sola vez)
     const inp = document.getElementById('dash-buscar-faltante');
     if (inp && !inp.dataset.wired) {
         inp.dataset.wired = '1';
@@ -455,9 +415,6 @@ function pintarFaltantes(filtro) {
         return;
     }
 
-    // La lista se corta en 50: con un catálogo grande, pintar cientos de
-    // renglones dentro de una cajita de 280px de alto solo hace lento el
-    // dashboard. Para trabajarlos de verdad está el módulo Faltantes.
     const MAX = 50;
     const visibles = bajos.slice(0, MAX);
 

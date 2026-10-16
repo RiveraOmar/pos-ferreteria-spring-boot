@@ -1,16 +1,6 @@
 import { fetchAPI } from '../services/api.js';
 import { fmtFecha } from '../services/fechas.js';
 
-
-// Escapa un texto que va DENTRO de un onclick="...('AQUI')".
-// Ahi conviven dos lenguajes y cada uno tiene su comilla: el atributo HTML
-// esta delimitado por " y la cadena de JavaScript por '. Por eso hay que
-// escapar para LOS DOS, en este orden:
-//   1. la barra invertida, o los escapes de abajo se rompen entre si
-//   2. la comilla simple, con \' — es escape de JAVASCRIPT
-//   3. y hasta el final el HTML: & " < >
-// La comilla simple NO se convierte a &#39; a proposito: el navegador la
-// decodificaria de vuelta a ' y cerraria la cadena de JS a media instruccion.
 function escAttr(s) {
     return String(s ?? '')
         .replace(/\\/g, '\\\\')
@@ -21,33 +11,20 @@ function escAttr(s) {
         .replace(/>/g, '&gt;');
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// DEUDAS — "LIBRETA DE REMISIONES"
-// Índice de clientes con deuda → hoja por cliente con movimientos cronológicos
-// (cargos con productos y nota de quién llevó, abonos, y saldo corrido).
-// Indicador visual 🧾 de si el cliente tiene datos fiscales para facturar.
-// ══════════════════════════════════════════════════════════════════════════════
 
-let clientesMap = {};        // id → datos del cliente (para saber si es facturable)
-let clienteAbierto = null;   // id de la hoja abierta (para refrescar tras un pago)
-let mostrarHistorial = false; // ¿mostrar también las notas ya liquidadas?
-let hojaActual = null;       // datos de la hoja abierta (para imprimir)
-let pestanaLibreta = 'nueva'; // 'nueva' (libreta de apuntes) | 'clasica' (hoja tipo factura)
-let mostrarHistorialNb = false; // (heredado; la hoja nueva usa pestañas)
+let clientesMap = {};        
+let clienteAbierto = null;   
+let mostrarHistorial = false; 
+let hojaActual = null;      
+let pestanaLibreta = 'nueva'; 
+let mostrarHistorialNb = false; 
 
-// Pestaña abierta dentro de la hoja de un cliente: 'pendientes' | 'pagadas'
 let pestanaHoja = 'pendientes';
 
-// Texto del buscador del índice. Vive aquí y no dentro de la función para
-// que sobreviva al repintado: al volver de la hoja de un cliente, o al darle
-// a Actualizar, la búsqueda que traías no se borra.
 let filtroClientes = '';
 
-// Tope de cada nota de fiado (regla de deducibilidad de pagos en efectivo).
-// Debe coincidir con LIMITE_EFECTIVO de services/facturaDividida.js
 const LIMITE_NOTA = 2000;
 
-// Encabezado de las impresiones — edítalo con los datos de tu negocio
 const NEGOCIO = {
     nombre: 'FERRETERÍA',
     telefono: ''
@@ -95,9 +72,7 @@ export function initDeudas(container) {
     clienteAbierto = null;
     pestanaLibreta = 'nueva';
 
-    // Deep-link desde el Dashboard: si se hizo clic en la deuda de un cliente,
-    // se abre directamente SU hoja (en la libreta nueva) en vez del índice.
-    const destino = sessionStorage.getItem('deudas_abrir_cliente');
+     const destino = sessionStorage.getItem('deudas_abrir_cliente');
     if (destino) {
         sessionStorage.removeItem('deudas_abrir_cliente');
         abrirDesdeDashboardNotebook(Number(destino));
@@ -106,7 +81,6 @@ export function initDeudas(container) {
     }
 }
 
-// Deep-link desde el Dashboard, pero hacia la vista NUEVA (primaria)
 async function abrirDesdeDashboardNotebook(clienteId) {
     if (!Object.keys(clientesMap).length) {
         try {
@@ -117,8 +91,6 @@ async function abrirDesdeDashboardNotebook(clienteId) {
     abrirLibretaNotebook(clienteId);
 }
 
-// La hoja necesita clientesMap (badge de facturable, botón Facturar), que
-// normalmente llena cargarLibreta. Al llegar directo, se carga primero.
 async function abrirDesdeDashboard(clienteId) {
     try {
         const clientes = await fetchAPI('/customers?active=true');
@@ -131,7 +103,6 @@ async function abrirDesdeDashboard(clienteId) {
 const fmt = n => Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const esc = s => String(s || '').replace(/'/g, "\\'");
 
-// ─── FACTURABLE: ¿el cliente tiene datos fiscales completos? ─────────────────
 
 function datosFiscalesFaltantes(c) {
     if (!c) return ['cliente no encontrado'];
@@ -156,7 +127,6 @@ function badgeFacturable(clienteId, chico) {
                 ⚠️ Sin datos fiscales</span>`;
 }
 
-// ─── ÍNDICE DE LA LIBRETA ─────────────────────────────────────────────────────
 
 async function cargarLibreta() {
     clienteAbierto = null;
@@ -172,7 +142,6 @@ async function cargarLibreta() {
         clientesMap = {};
         clientes.forEach(c => clientesMap[c.id] = c);
 
-        // Agrupar deudas pendientes por cliente
         const porCliente = {};
         deudas.forEach(d => {
             if (d.status === 'PAID') return;
@@ -189,8 +158,6 @@ async function cargarLibreta() {
             if (f && (!g.masAntigua || f < g.masAntigua)) g.masAntigua = f;
         });
 
-        // Más antiguas primero: el cliente que más tiempo lleva debiendo
-        // encabeza la libreta (prioridad natural de cobranza)
         const lista = Object.values(porCliente).sort((a, b) => {
             const fa = a.masAntigua ? a.masAntigua.getTime() : Infinity;
             const fb = b.masAntigua ? b.masAntigua.getTime() : Infinity;
@@ -237,10 +204,8 @@ async function cargarLibreta() {
                 Para anotar productos en la libreta, registra una <strong>venta a crédito</strong>
                 desde el módulo Ventas; aparecerá aquí automáticamente con su nota.</p>`;
 
-        // Autofocus: llegar y teclear el nombre del cliente directo
         setTimeout(() => document.getElementById('filtro-libreta')?.focus(), 50);
 
-        // Filtro en vivo
         document.getElementById('filtro-libreta').addEventListener('input', e => {
             const normalizar = texto => String(texto ?? '')
     .normalize('NFD')
@@ -274,7 +239,6 @@ function chipAntiguedad(dias) {
 function tarjetaCliente(g) {
     const inicial = (g.nombre || '?').trim().charAt(0).toUpperCase();
     const dias = diasDesde(g.masAntigua);
-    // Borde según urgencia: rojo >30 días, ámbar >15, gris normal
     const borde = dias > 30 ? '#dc3545' : dias > 15 ? '#2B6CA3' : 'var(--linea, #DCE0E5)';
     return `
     <div class="col-sm-6 col-lg-4 col-xxl-3 hoja-item"
@@ -321,7 +285,6 @@ function tarjetaCliente(g) {
     </div>`;
 }
 
-// ─── HOJA DEL CLIENTE (la página de la libreta) ──────────────────────────────
 
 window.abrirHojaCliente = async (clienteId) => {
     if (clienteAbierto !== clienteId) mostrarHistorial = false; // hoja nueva: ocultar liquidadas
@@ -332,7 +295,6 @@ window.abrirHojaCliente = async (clienteId) => {
         <p class="text-muted small mt-2">Abriendo hoja del cliente...</p></div>`;
 
     try {
-        // 1. Todas las deudas del cliente (incluye pagadas: la libreta guarda historia)
         const deudas = await fetchAPI(`/debts/customer/${clienteId}`);
         if (!deudas.length) {
             container.innerHTML = `<div class="alert alert-info">Este cliente no tiene movimientos.
@@ -343,7 +305,6 @@ window.abrirHojaCliente = async (clienteId) => {
         const nombre = deudas[0].customerName || cliente.fullName || '';
         const telefono = deudas[0].customerPhone || cliente.phoneNumber || '';
 
-        // 2. Ventas vinculadas (para listar los productos que se llevó)
         const saleIds = deudas.filter(d => d.saleId).map(d => d.saleId);
         let ventasMap = {};
         if (saleIds.length) {
@@ -351,15 +312,12 @@ window.abrirHojaCliente = async (clienteId) => {
             ventas.forEach(v => ventasMap[v.id] = v);
         }
 
-        // 3. Pagos de cada deuda (los abonos de la libreta)
         const pagosPorDeuda = await Promise.all(
             deudas.map(d => fetchAPI(`/debts/${d.id}/payments`).catch(() => []))
         );
 
-        // Guardar los datos de la hoja para las impresiones
         hojaActual = { clienteId, nombre, telefono, deudas, ventasMap, pagosPorDeuda };
 
-        // 4. Armar movimientos cronológicos: cargos y abonos
         const movs = [];
         deudas.forEach((d, i) => {
             movs.push({ tipo: 'CARGO', fecha: d.createdAt, deuda: d, venta: ventasMap[d.saleId] });
@@ -370,8 +328,6 @@ window.abrirHojaCliente = async (clienteId) => {
         });
         movs.sort((a, b) => new Date(a.fecha || 0) - new Date(b.fecha || 0));
 
-        // Por defecto solo se muestran las notas pendientes (y sus abonos parciales);
-        // las liquidadas se despliegan con el botón "Ver liquidadas".
         const numLiquidadas = deudas.filter(d => d.status === 'PAID').length;
         const movsVisibles = mostrarHistorial
             ? movs
@@ -379,7 +335,6 @@ window.abrirHojaCliente = async (clienteId) => {
                 ? m.deuda.status !== 'PAID'
                 : !m.deudaLiquidada);
 
-        // 5. Saldo corrido, como en la libreta física
         let saldo = 0;
         const filas = movsVisibles.map(m => {
             if (m.tipo === 'CARGO') {
@@ -395,7 +350,6 @@ window.abrirHojaCliente = async (clienteId) => {
             d.status !== 'PAID' ? s + Number(d.remainingAmount) : s, 0);
         const pendientes = deudas.filter(d => d.status !== 'PAID');
 
-        // Botón WhatsApp de recordatorio (si hay teléfono)
         const tel = (telefono || '').replace(/\D/g, '');
         const btnWhats = tel.length >= 10 ? `
             <a class="btn btn-outline-success btn-sm" target="_blank"
@@ -403,17 +357,7 @@ window.abrirHojaCliente = async (clienteId) => {
                    `Hola ${nombre}, le recordamos que tiene un saldo pendiente de $${fmt(totalPendiente)} en la ferretería. ¡Gracias!`)}">
                <i class="bi bi-whatsapp me-1"></i>Recordatorio</a>` : '';
 
-        // Botón Facturar: solo si el cliente tiene datos fiscales completos
-        // y hay notas pendientes con venta vinculada
         const facturable = datosFiscalesFaltantes(clientesMap[clienteId]).length === 0;
-        // Se puede facturar CUALQUIER nota que venga de una venta, esté
-        // pagada o no. Antes solo las pendientes, y eso dejaba fuera el caso
-        // más común del mostrador: el cliente liquida su cuenta y HASTA
-        // ENTONCES pide su factura.
-        //
-        // Fiscalmente además es el caso más limpio: una nota ya pagada se
-        // timbra como PUE (pago en una sola exhibición), que es justo lo que
-        // manda el sistema.
         const notasTimbrables = deudas.filter(d => d.saleId);
         const marcadasInicio  = pendientes.filter(d => d.saleId).length;
         const btnFacturar = (facturable && notasTimbrables.length) ? `
@@ -508,10 +452,6 @@ window.abrirHojaCliente = async (clienteId) => {
 
 window.volverALibreta = () => cargarLibreta();
 
-// ─── FACTURAR TODAS LAS NOTAS DEL CLIENTE ─────────────────────────────────────
-// Cobro mensual: el cliente junta 6, 7, 15 notas y todas se facturan el mismo
-// día, cada una como su propio CFDI (todas < $2,000 por construcción).
-// Usa el mismo endpoint que el Historial: POST /cfdi/timbrar/venta/{saleId}
 
 window.facturarNotasCliente = async (clienteId, clienteNombre) => {
     Swal.fire({ title: 'Revisando notas...',
@@ -519,14 +459,10 @@ window.facturarNotasCliente = async (clienteId, clienteNombre) => {
         allowOutsideClick: false, showConfirmButton: false });
 
     try {
-        // 1. Solo las notas SELECCIONADAS con su casilla en la hoja
         const seleccionadas = new Set(
             [...document.querySelectorAll('.chk-facturar:checked')]
                 .map(c => Number(c.dataset.debtId)));
         const deudas = await fetchAPI(`/debts/customer/${clienteId}`);
-        // Ya NO se excluyen las pagadas: si el cliente liquidó su cuenta y
-        // ahora pide su factura, tiene derecho y la venta existe igual. El
-        // backend sigue impidiendo timbrar dos veces la misma venta.
         const notas = deudas.filter(d => d.saleId && seleccionadas.has(d.id));
         if (!notas.length) {
             Swal.fire('Nada seleccionado',
@@ -534,7 +470,6 @@ window.facturarNotasCliente = async (clienteId, clienteNombre) => {
             return;
         }
 
-        // 2. Detectar cuáles ya tienen CFDI vigente (no gastar timbres dobles)
         const estados = await Promise.all(notas.map(async d => {
             try {
                 const cfdi = await fetchAPI(`/cfdi/venta/${d.saleId}`);
@@ -550,7 +485,6 @@ window.facturarNotasCliente = async (clienteId, clienteNombre) => {
             return;
         }
 
-        // 3. Previsualización
         const totalFacturar = porTimbrar.reduce((s, d) => s + Number(d.totalAmount), 0);
         const lista = porTimbrar.map(d => `
             <div class="d-flex justify-content-between border-bottom py-1">
@@ -580,8 +514,6 @@ window.facturarNotasCliente = async (clienteId, clienteNombre) => {
         });
         if (!conf.isConfirmed) return;
 
-        // 4. Timbrar una por una (secuencial); si una falla, se continúa
-        //    con las demás y al final se reporta todo.
         Swal.fire({ title: 'Timbrando con FEL...',
             html: `<div class="spinner-border text-primary"></div>
                    <p class="text-muted small mt-2" id="progreso-timbrado">0 de ${porTimbrar.length}</p>`,
@@ -602,7 +534,6 @@ window.facturarNotasCliente = async (clienteId, clienteNombre) => {
             if (p) p.textContent = `${i + 1} de ${porTimbrar.length}`;
         }
 
-        // 5. Resumen final
         const exitos = resultados.filter(r => r.ok);
         const fallos = resultados.filter(r => !r.ok);
         await Swal.fire({
@@ -638,7 +569,6 @@ window.toggleHistorialLibreta = () => {
     if (clienteAbierto) window.abrirHojaCliente(clienteAbierto);
 };
 
-// Actualiza el contador del botón "Facturar seleccionadas" al marcar/desmarcar
 window.actualizarBotonFacturar = () => {
     const n = document.querySelectorAll('.chk-facturar:checked').length;
     const cnt = document.getElementById('cnt-facturar');
@@ -647,7 +577,6 @@ window.actualizarBotonFacturar = () => {
     if (btn) btn.disabled = n === 0;
 };
 
-// ─── IMPRESIÓN: nota individual y hoja completa (remisión para el cliente) ────
 
 const fechaHoy = () => new Date().toLocaleDateString('es-MX',
     { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -666,7 +595,6 @@ function estiloImpresion() { return `<style>
     @media print{body{margin:8mm}}
 </style>`; }
 
-// Tabla de productos con fecha, quién llevó, cantidad, descripción y precios
 function tablaProductosImpresion(venta, notaOriginal) {
     const items = venta?.items?.length ? venta.items : [];
     if (!items.length) return '<p><em>Sin detalle de productos</em></p>';
@@ -685,8 +613,6 @@ function tablaProductosImpresion(venta, notaOriginal) {
         </tr>`).join('') + '</tbody></table>';
 }
 
-// La ventana se abre ANTES de consultar la API (si se abriera después del
-// await, el navegador la bloquearía como popup no solicitado)
 function abrirVentanaImpresion() {
     const w = window.open('', '_blank');
     if (!w) {
@@ -714,8 +640,6 @@ function abrirImpresion(titulo, cuerpo) {
     if (w) escribirImpresion(w, titulo, cuerpo);
 }
 
-// Folio fiscal (serie+folio del CFDI vigente) de cada nota.
-// Devuelve un mapa debtId → "A727"; las notas sin facturar no aparecen.
 async function foliosFactura(listaNotas) {
     const mapa = {};
     await Promise.all(listaNotas.map(async d => {
@@ -724,12 +648,11 @@ async function foliosFactura(listaNotas) {
             const c = await fetchAPI(`/cfdi/venta/${d.saleId}`);
             if (c && c.status === 'VIGENTE')
                 mapa[d.id] = (c.serie || '') + (c.folio || '');
-        } catch (e) { /* 404 = aún sin factura */ }
+        } catch (e) { }
     }));
     return mapa;
 }
 
-// Imprimir UNA nota: productos con fecha y portador, total, abonos y resta
 window.imprimirNota = (debtId) => {
     if (!hojaActual) return;
     const d = hojaActual.deudas.find(x => x.id === debtId);
@@ -769,9 +692,6 @@ window.imprimirNota = (debtId) => {
     abrirImpresion('Nota ' + (d.invoiceNumber || ''), cuerpo);
 };
 
-// Imprimir la HOJA del cliente: UNA sola tabla continua estilo libreta con
-// todos los productos de las notas SELECCIONADAS (casillas "Facturar").
-// Si no hay ninguna marcada, se imprimen todas las visibles.
 window.imprimirHoja = async () => {
     if (!hojaActual) return;
 
@@ -787,20 +707,15 @@ window.imprimirHoja = async () => {
         return;
     }
 
-    // Abrir la ventana ANTES de consultar folios (evita bloqueo de popups)
     const w = abrirVentanaImpresion();
     if (!w) return;
 
-    // Folio de factura de cada nota (si ya fue timbrada).
-    // Si aún no se factura, se numera simple: N-1, N-2... en orden cronológico
-    // (los folios internos INV-xxx no le dicen nada al cliente).
     lista.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
     const facturas = await foliosFactura(lista);
     const numeroSimple = {};
     lista.forEach((d, i) => numeroSimple[d.id] = 'N-' + (i + 1));
     const folioDe = d => facturas[d.id] || numeroSimple[d.id];
 
-    // Todos los productos de todas las notas, en una sola lista cronológica
     const renglones = [];
     lista.forEach(d => {
         const venta = hojaActual.ventasMap[d.saleId];
@@ -828,7 +743,6 @@ window.imprimirHoja = async () => {
     const abonado    = lista.reduce((s, d) => s + Number(d.paidAmount || 0), 0);
     const resta      = lista.reduce((s, d) => s + Number(d.remainingAmount), 0);
 
-    // Leyenda: qué facturas ampara esta hoja (para cotejar con los CFDI)
     const resumenNotas = lista.map(d =>
         `${facturas[d.id] ? 'Factura ' + facturas[d.id] : numeroSimple[d.id]}
          ($${fmt(d.totalAmount)})`).join(' &nbsp;·&nbsp; ');
@@ -857,8 +771,6 @@ window.imprimirHoja = async () => {
     escribirImpresion(w, 'Hoja de cliente ' + hojaActual.nombre, cuerpo);
 };
 
-// Fila de CARGO estilo factura: un renglón por producto, con Fecha/Folio/Cargo/Saldo
-// compartidos mediante rowspan (como la tabla de CONCEPTOS del PDF).
 function filaCargo(m, saldo, nombreCliente) {
     const d = m.deuda;
     const liquidada = d.status === 'PAID';
@@ -868,7 +780,6 @@ function filaCargo(m, saldo, nombreCliente) {
         ? m.venta.items
         : [{ quantity: '', productName: 'Sin detalle de productos', unitPrice: null, __sinDetalle: true }];
 
-    // filas: productos + 1 extra si hay nota (post-it)
     const R = items.length + (d.notes ? 1 : 0);
 
     const badges = `
@@ -888,8 +799,6 @@ function filaCargo(m, saldo, nombreCliente) {
                 for="chk-fact-${d.id}">Facturar</label>
         </div>` : ''}`;
 
-    // Nota original de la nota (el primer "quién llevó", para los productos
-    // iniciales que no traen portador propio)
     const notaOriginal = (d.notes || '').split('|')[0].trim();
 
     const celdaProducto = i => {
@@ -898,7 +807,6 @@ function filaCargo(m, saldo, nombreCliente) {
            <td class="text-muted fst-italic">${i.productName}</td>
            <td class="text-end text-muted">—</td>
            <td class="text-end text-muted">—</td>`;
-        // Trazabilidad por producto: cuándo se llevó y quién
         const quien = i.llevadoPor || notaOriginal;
         const traza = (i.addedAt || quien) ? `
            <div class="text-muted" style="font-size:.68rem">
@@ -930,12 +838,10 @@ function filaCargo(m, saldo, nombreCliente) {
         </td>
     </tr>`;
 
-    // Resto de productos de la misma nota
     for (let i = 1; i < items.length; i++) {
         html += `<tr${claseTr}>${celdaProducto(items[i])}</tr>`;
     }
 
-    // Nota de quién llevó (post-it), ocupa las 4 columnas de producto
     if (d.notes) {
         html += `
         <tr${claseTr}>
@@ -947,7 +853,6 @@ function filaCargo(m, saldo, nombreCliente) {
     return html;
 }
 
-// Fila de ABONO estilo factura
 function filaAbono(m, saldo) {
     return `
     <tr style="background:#e8f5e9">
@@ -965,7 +870,6 @@ function filaAbono(m, saldo) {
     </tr>`;
 }
 
-// ─── SALDAR TODO (igual que antes, refresca la hoja) ─────────────────────────
 
 window.saldarTodo = async (clienteId, clienteNombre, totalPendiente) => {
     const result = await Swal.fire({
@@ -1034,7 +938,6 @@ window.saldarTodo = async (clienteId, clienteNombre, totalPendiente) => {
     } catch (e) { Swal.fire('Error', e.message, 'error'); }
 };
 
-// ─── REGISTRAR ABONO (igual que antes, refresca la hoja) ─────────────────────
 
 window.abrirPago = async (debtId, remaining, clienteNombre) => {
     const result = await Swal.fire({
@@ -1083,10 +986,6 @@ window.abrirPago = async (debtId, remaining, clienteNombre) => {
     } catch (e) { Swal.fire('Error', e.message, 'error'); }
 };
 
-// ─── ABONAR A LA CUENTA ───────────────────────────────────────────────────────
-// El cliente entrega dinero a su cuenta (no a una nota específica).
-// El abono se reparte automáticamente entre sus notas pendientes,
-// empezando por la más antigua — igual que en la libreta física.
 
 window.abonarCuenta = async (clienteId, clienteNombre, totalPendiente) => {
     const result = await Swal.fire({
@@ -1122,13 +1021,11 @@ window.abonarCuenta = async (clienteId, clienteNombre, totalPendiente) => {
         allowOutsideClick: false, showConfirmButton: false });
 
     try {
-        // Notas pendientes, de la más antigua a la más nueva
         const deudas = await fetchAPI(`/debts/customer/${clienteId}`);
         const pendientes = deudas
             .filter(d => d.status !== 'PAID')
             .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
 
-        // Repartir el monto entre las notas
         let restante = result.value.amount;
         const aplicados = [];
         for (const d of pendientes) {
@@ -1173,14 +1070,8 @@ function refrescarVista() {
         if (clienteAbierto) abrirLibretaNotebook(clienteAbierto);
         else cargarIndiceNotebook();
     }
-    // El saldo pudo cambiar → actualizar el badge del sidebar
     if (typeof window.refrescarBadges === 'function') window.refrescarBadges();
 }
-// ═════════════════════════════════════════════════════════════════════════════
-//  LIBRETA NUEVA — vista principal, estilo "libreta de apuntes de mostrador"
-//  Renglones apilados (no tabla de bordes), más nuevo arriba, sin tener que
-//  entrar a cada venta: los productos ya vienen desglosados de una vez.
-// ═════════════════════════════════════════════════════════════════════════════
 
 function inyectarEstiloNotebook() {
     if (document.getElementById('estilo-libreta-notebook')) return;
@@ -1220,7 +1111,6 @@ function inyectarEstiloNotebook() {
     document.head.appendChild(s);
 }
 
-// ─── ÍNDICE (compartido visualmente con el de la vista clásica) ─────────────
 async function cargarIndiceNotebook() {
     clienteAbierto = null;
     const container = document.getElementById('deudas-container');
@@ -1251,10 +1141,6 @@ async function cargarIndiceNotebook() {
             if (f && (!g.masAntigua || f < g.masAntigua)) g.masAntigua = f;
         });
 
-        // Los clientes SIN deuda también entran a la lista, para poder
-        // contestar "oye, ¿te debo algo?" de cualquiera y no solo de los que
-        // ya deben. No se muestran de entrada (llenarían la pantalla de gente
-        // que no debe nada): aparecen al escribir en el buscador.
         clientes.forEach(c => {
             if (!porCliente[c.id]) {
                 porCliente[c.id] = {
@@ -1265,9 +1151,7 @@ async function cargarIndiceNotebook() {
         });
 
         const lista = Object.values(porCliente).sort((a, b) => {
-            // Primero los que deben, ordenados por antigüedad; los que no
-            // deben van al final en orden alfabético.
-            if (a.sinDeuda !== b.sinDeuda) return a.sinDeuda ? 1 : -1;
+           if (a.sinDeuda !== b.sinDeuda) return a.sinDeuda ? 1 : -1;
             if (a.sinDeuda) return (a.nombre || '').localeCompare(b.nombre || '');
             const fa = a.masAntigua ? a.masAntigua.getTime() : Infinity;
             const fb = b.masAntigua ? b.masAntigua.getTime() : Infinity;
@@ -1306,9 +1190,7 @@ async function cargarIndiceNotebook() {
             </p>`;
 
         setTimeout(() => document.getElementById('filtro-nb')?.focus(), 50);
-        // Sin texto: solo los que deben (la pantalla de trabajo del día).
-        // Con texto: busca entre TODOS, deban o no.
-       const normalizar = texto => String(texto ?? '')
+        const normalizar = texto => String(texto ?? '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
@@ -1333,9 +1215,9 @@ const aplicarFiltroNb = (q) => {
             if (vacio) vacio.style.display = (q && visibles === 0) ? '' : 'none';
         };
         const inputNb = document.getElementById('filtro-nb');
-        inputNb.value = filtroClientes;          // recuperar lo que se traía
+        inputNb.value = filtroClientes;          
         inputNb.addEventListener('input', e => {
-            filtroClientes = e.target.value;     // recordarlo para el próximo repintado
+            filtroClientes = e.target.value;     
             aplicarFiltroNb(filtroClientes);
         });
         aplicarFiltroNb(filtroClientes);
@@ -1347,7 +1229,6 @@ const aplicarFiltroNb = (q) => {
 function tarjetaClienteNotebook(g) {
     const inicial = (g.nombre || '?').trim().charAt(0).toUpperCase();
     const dias = diasDesde(g.masAntigua);
-    // Verde para quien no debe nada: se distingue de un vistazo al buscarlo
     const borde = g.sinDeuda ? '#157F3D'
                 : dias > 30 ? '#C0392B'
                 : dias > 15 ? '#B7791F' : 'var(--linea,#DCE0E5)';
@@ -1401,10 +1282,7 @@ function tarjetaClienteNotebook(g) {
     </div>`;
 }
 
-// ─── DETALLE: la libreta de apuntes de UN cliente ────────────────────────────
 window.abrirLibretaNotebook = async (clienteId) => {
-    // Al cambiar de cliente siempre se abre en Pendientes, que es lo que se
-    // consulta el 95% de las veces.
     if (clienteAbierto !== clienteId) pestanaHoja = 'pendientes';
     clienteAbierto = clienteId;
     const container = document.getElementById('deudas-container');
@@ -1431,12 +1309,6 @@ window.abrirLibretaNotebook = async (clienteId) => {
         const pendientes = deudas.filter(d => d.status !== 'PAID');
         const numLiquidadas = deudas.filter(d => d.status === 'PAID').length;
 
-        // DOS PESTAÑAS: Pendientes y Pagadas.
-        //
-        // Antes era un botón de "Ver liquidadas" que mezclaba todo en una
-        // sola lista. Con dos pestañas se contesta directo la pregunta del
-        // mostrador: "¿te debo algo?" (Pendientes) y "¿qué te he pagado?"
-        // (Pagadas), sin que una tape a la otra.
         const visibles = pestanaHoja === 'pagadas'
             ? entradas.filter(e => e.debtStatus === 'PAID')
             : entradas.filter(e => e.debtStatus !== 'PAID');
@@ -1474,15 +1346,7 @@ window.abrirLibretaNotebook = async (clienteId) => {
                <i class="bi bi-whatsapp me-1"></i>Recordar</a>` : '';
 
         const facturable = datosFiscalesFaltantes(clientesMap[clienteId]).length === 0;
-        // Se puede facturar CUALQUIER nota que venga de una venta, esté
-        // pagada o no. Antes solo las pendientes, y eso dejaba fuera el caso
-        // más común del mostrador: el cliente liquida su cuenta y HASTA
-        // ENTONCES pide su factura.
-        //
-        // Fiscalmente además es el caso más limpio: una nota ya pagada se
-        // timbra como PUE (pago en una sola exhibición), que es justo lo que
-        // manda el sistema.
-        const notasTimbrables = deudas.filter(d => d.saleId);
+         const notasTimbrables = deudas.filter(d => d.saleId);
         const marcadasInicio  = pendientes.filter(d => d.saleId).length;
         const btnFacturar = (facturable && notasTimbrables.length) ? `
             <button class="btn btn-outline-primary" id="btn-facturar-notas"
@@ -1553,8 +1417,6 @@ window.abrirLibretaNotebook = async (clienteId) => {
             </div>
             <div class="nb-papel">${filasHtml}</div>`;
 
-        // Reutiliza hojaActual (para imprimir/facturar) con los mismos datos
-        // que usaba la vista clásica, para no duplicar esa lógica.
         const saleIds = deudas.filter(d => d.saleId).map(d => d.saleId);
         let ventasMap = {};
         if (saleIds.length) {
@@ -1571,8 +1433,6 @@ window.abrirLibretaNotebook = async (clienteId) => {
 };
 
 window.toggleHistorialNb = () => {
-    // Se conserva por si alguna vista vieja todavía lo llama: ahora solo
-    // salta entre las dos pestañas.
     pestanaHoja = pestanaHoja === 'pagadas' ? 'pendientes' : 'pagadas';
     abrirLibretaNotebook(clienteAbierto);
 };

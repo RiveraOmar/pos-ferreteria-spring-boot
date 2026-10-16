@@ -22,7 +22,6 @@ export function initFacturacion(container) {
         '<i class="bi bi-arrow-clockwise me-1"></i>Actualizar</button>' +
         '</div>' +
 
-        // Tarjeta Factura Global
         '<div class="card shadow-sm border-0 mb-4 border-start border-success border-4">' +
         '<div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">' +
         '<div class="d-flex align-items-center gap-2">' +
@@ -47,7 +46,6 @@ export function initFacturacion(container) {
         'las ventas al público general que faltan por facturar.</p>' +
         '</div></div>' +
 
-        // Tabs
         '<ul class="nav nav-tabs mb-0" id="cfdi-tabs">' +
         '<li class="nav-item"><a class="nav-link active" href="#" data-tab="vigentes">' +
         '<i class="bi bi-check-circle text-success me-1"></i>Vigentes</a></li>' +
@@ -55,14 +53,12 @@ export function initFacturacion(container) {
         '<i class="bi bi-x-circle text-danger me-1"></i>Cancelados</a></li>' +
         '</ul>' +
 
-        // Tabla
         '<div class="card shadow-sm border-0 rounded-top-0">' +
         '<div id="cfdi-content">' +
         '<div class="text-center py-5"><div class="spinner-border text-primary"></div>' +
         '<p class="text-muted mt-2 small">Cargando CFDIs...</p></div>' +
         '</div></div>' +
 
-        // Modal ver CFDI
         '<div class="modal fade" id="modal-cfdi" tabindex="-1">' +
         '<div class="modal-dialog modal-xl modal-dialog-scrollable">' +
         '<div class="modal-content">' +
@@ -86,8 +82,6 @@ export function initFacturacion(container) {
         '<div class="modal-body p-0" id="modal-cfdi-body"></div>' +
         '</div></div></div>';
 
-    // ─── Barra de búsqueda del historial (auditoría) ─────────────────────
-    // Se inserta arriba de las pestañas: texto libre + rango de fechas.
     document.getElementById('cfdi-tabs').insertAdjacentHTML('beforebegin',
         '<div class="card border-0 shadow-sm mb-2"><div class="card-body py-2">' +
         '<div class="row g-2 align-items-end">' +
@@ -136,7 +130,6 @@ export function initFacturacion(container) {
         cargarCfdis(tabActual);
     });
 
-    // Eventos tabs
     let tabActual = 'vigentes';
     document.querySelectorAll('#cfdi-tabs .nav-link').forEach(function(tab) {
         tab.addEventListener('click', function(e) {
@@ -150,7 +143,6 @@ export function initFacturacion(container) {
 
     document.getElementById('btn-refrescar-cfdi').addEventListener('click', function() { cargarCfdis(tabActual, true); });
 
-    // Cargar la configuración de periodicidad activa y armar el selector de periodos
     document.getElementById('btn-config-periodicidad').addEventListener('click', abrirConfigPeriodicidad);
     document.getElementById('btn-ver-pendientes').addEventListener('click', function() {
         cargarFacturaGlobal();
@@ -160,13 +152,7 @@ export function initFacturacion(container) {
     cargarCfdis('vigentes');
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  CONFIGURACIÓN DE PERIODICIDAD (Diaria / Semanal / Quincenal / Mensual)
-// ══════════════════════════════════════════════════════════════════════════════
-
-// Estado en memoria de la periodicidad activa, para no repetir el fetch
-// cada vez que se genera el selector de periodos.
-let periodicidadConfig = null; // { periodicidad, periodicidadNombre, periodicidadDescripcion, periodicidadLetra, codigoSat, autoTimbradoHabilitado }
+let periodicidadConfig = null; 
 
 const BADGES_POR_TIPO = {
     DIARIA:    '1 factura al día · se timbra sola cada mañana',
@@ -179,8 +165,6 @@ async function inicializarPeriodicidad() {
     try {
         periodicidadConfig = await fetchAPI('/configuracion/facturacion');
     } catch (e) {
-        // Si falla (instalación vieja sin el endpoint, o sin permiso), usar quincenal
-        // como estaba antes, para no dejar la pantalla rota.
         periodicidadConfig = {
             periodicidad: 'QUINCENAL', periodicidadNombre: 'Quincenal',
             periodicidadLetra: 'Q', codigoSat: '03', autoTimbradoHabilitado: true
@@ -256,7 +240,7 @@ async function abrirConfigPeriodicidad() {
         }
     });
     if (!r.isConfirmed) return;
-    if (r.value === tipoActual) return; // sin cambios
+    if (r.value === tipoActual) return; 
 
     try {
         const res = await fetchAPI('/configuracion/facturacion', {
@@ -270,16 +254,15 @@ async function abrirConfigPeriodicidad() {
             text: res.mensaje || ('Ahora factura ' + (res.periodicidadNombre || '').toLowerCase() + '.'),
             timer: 2500, showConfirmButton: false
         });
-        // Refrescar la vista de pendientes con el nuevo periodo por default
+        
         cargarFacturaGlobal();
     } catch (e) {
         Swal.fire('Error', e.message, 'error');
     }
 }
 
-// ─── CARGA Y RENDER DE LA TABLA ────────────────────────────────────────────
 
-let cfdisCache = null;   // se invalida al refrescar/timbrar/cancelar
+let cfdisCache = null;   
 
 async function cargarCfdis(status, forzar) {
     const content = document.getElementById('cfdi-content');
@@ -293,19 +276,7 @@ async function cargarCfdis(status, forzar) {
             return;
         }
     }
-    // Los estados posibles son tres, no dos: VIGENTE, CANCELADO y
-    // CANCELACION_PENDIENTE (la solicitud se envió al SAT pero todavía no
-    // se resuelve — pasa cuando el receptor tiene buzón tributario y tiene
-    // 72 horas para aceptar).
-    //
-    // Antes el filtro solo miraba VIGENTE y CANCELADO, así que una factura
-    // en proceso de cancelación DESAPARECÍA de las dos pestañas: no estaba
-    // ni aquí ni allá, y parecía que se había borrado.
-    //
-    // Ahora las pendientes se muestran junto con las canceladas (que es
-    // donde uno las va a buscar), con su propia insignia amarilla. Y por si
-    // algún día aparece un estado nuevo, el "else" lo manda a Cancelados en
-    // vez de tragárselo.
+    
     let lista = status === 'vigentes'
         ? cfdisCache.filter(function(c) { return c.status === 'VIGENTE'; })
         : cfdisCache.filter(function(c) { return c.status !== 'VIGENTE'; });
@@ -314,10 +285,7 @@ async function cargarCfdis(status, forzar) {
     renderTabla(content, lista, status);
 }
 
-// ─── FILTROS DEL HISTORIAL (auditoría) ──────────────────────────────────────
-// Texto libre: folio, UUID, receptor, RFC — y también FOLIO DE TICKET:
-// buscar "INV-000015" encuentra la factura global que lo incluye (para
-// eso viaja en NoIdentificacion y en la trazabilidad).
+
 function aplicarFiltrosCfdi(lista) {
     const q     = (document.getElementById('cfdi-buscar')?.value || '').trim().toLowerCase();
     const desde = document.getElementById('cfdi-desde')?.value || '';
@@ -329,22 +297,20 @@ function aplicarFiltrosCfdi(lista) {
     if (tipo === 'global')     r = r.filter(function(c) { return c.esGlobal; });
     if (tipo === 'nominativa') r = r.filter(function(c) { return !c.esGlobal; });
 
-    // fechaTimbrado viene ISO: "2026-07-17T10:52:04" → comparar el día
     if (desde) r = r.filter(function(c) { return (c.fechaTimbrado || '').substring(0, 10) >= desde; });
     if (hasta) r = r.filter(function(c) { return (c.fechaTimbrado || '').substring(0, 10) <= hasta; });
 
     if (q) {
         r = r.filter(function(c) {
             const campos = [
-                (c.serie || '') + (c.folio || ''),   // "A742"
+                (c.serie || '') + (c.folio || ''),   
                 c.folio, c.uuid, c.nombreReceptor, c.rfcReceptor,
-                c.invoiceNumber                       // ticket de nominativa
+                c.invoiceNumber                      
             ].filter(Boolean).join(' ').toLowerCase();
             return campos.includes(q);
         });
     }
 
-    // Resumen para auditoría: cuántas y cuánto suman las filtradas
     const res = document.getElementById('cfdi-resumen-filtro');
     if (res) {
         const hayFiltro = q || desde || hasta || tipo;
@@ -381,19 +347,16 @@ function renderTabla(container, cfdis, status) {
         const uuidCorto = c.uuid ? c.uuid.substring(0, 8) + '...' : '';
 
         return '<tr class="align-middle' + (esCancelado ? ' text-muted' : '') + '">' +
-            // Folio
             '<td class="ps-3">' +
             '<span class="fw-bold font-monospace">' + (folio || '—') + '</span>' +
             (c.esGlobal
                 ? '<span class="badge bg-success-subtle text-success border border-success ms-1" style="font-size:.62rem">GLOBAL</span>'
                 : '') +
             '</td>' +
-            // Fecha
             '<td>' +
             '<div class="small">' + fecha + '</div>' +
             '<div class="text-muted" style="font-size:.7rem">' + hora + '</div>' +
             '</td>' +
-            // Receptor
             '<td>' +
             '<div class="small fw-bold">' + (c.nombreReceptor || 'PUBLICO EN GENERAL') + '</div>' +
             '<div class="text-muted font-monospace" style="font-size:.7rem">' + (c.rfcReceptor || '') + '</div>' +
@@ -402,15 +365,12 @@ function renderTabla(container, cfdis, status) {
                   c.ticketsIncluidos + ' ticket(s) incluido(s)</div>'
                 : '') +
             '</td>' +
-            // UUID
             '<td>' +
             '<span class="font-monospace text-muted" style="font-size:.7rem" title="' + (c.uuid || '') + '">' + uuidCorto + '</span>' +
             '</td>' +
-            // Total
             '<td class="text-end fw-bold' + (esCancelado ? '' : ' text-success') + '">' +
             '$' + Number(c.total || 0).toFixed(2) +
             '</td>' +
-            // Estado
             '<td class="text-center">' +
             '<span class="badge ' + 
             (esCancelado ? 'bg-danger' : 
@@ -418,7 +378,6 @@ function renderTabla(container, cfdis, status) {
             (c.status === 'CANCELACION_PENDIENTE' ? '⏳ Pendiente' : c.status) + 
             '</span>' +
             '</td>' +
-            // Acciones — botones pequeños como FEL
             '<td class="text-end pe-3">' +
             '<div class="btn-group btn-group-sm">' +
             (c.esGlobal
@@ -464,7 +423,6 @@ function renderTabla(container, cfdis, status) {
         '</div>';
 }
 
-// ─── VER COMPROBANTE EN MODAL (como FEL) ────────────────────────────────────
 
 window.verCfdi = async function(uuid) {
     const modal = new bootstrap.Modal(document.getElementById('modal-cfdi'));
@@ -484,11 +442,9 @@ window.verCfdi = async function(uuid) {
         titulo.textContent = 'Factura ' + folio;
         subtitulo.textContent = 'UUID: ' + (cfdi.uuid || '') + ' — ' + (cfdi.fechaTimbrado ? cfdi.fechaTimbrado.substring(0,16).replace('T',' ') : '');
 
-        // Guardar uuid para botones del modal
         document.getElementById('modal-btn-uuid').onclick = function() { window.copiarUuid(cfdi.uuid); };
         document.getElementById('modal-btn-xml').onclick = function() { mostrarXml(cfdi); };
 
-        // Ver PDF dentro del propio modal (sin descargar)
         document.getElementById('modal-btn-verpdf').onclick = function() {
             mostrarPdfEnModal(cfdi.uuid, body);
         };
@@ -501,7 +457,6 @@ window.verCfdi = async function(uuid) {
             btnPdf.style.display = 'none';
         }
 
-        // Renderizar el XML como vista de comprobante
         body.innerHTML = renderComprobanteHtml(cfdi);
 
     } catch (e) {
@@ -510,7 +465,6 @@ window.verCfdi = async function(uuid) {
 };
 
 function renderComprobanteHtml(cfdi) {
-    // Parsear el XML timbrado para extraer datos
     let conceptos = [];
     let emisorNombre = '', emisorRfc = '', emisorRegimen = '';
     let receptorNombre = '', receptorRfc = '', receptorRegimen = '', receptorUsoCfdi = '', receptorCp = '';
@@ -518,14 +472,12 @@ function renderComprobanteHtml(cfdi) {
     let subTotal = '', total = '', moneda = '', formaPago = '', metodoPago = '', tipoComprobante = '', exportacion = '';
 
     if (cfdi.tieneXml && cfdi.xmlTimbrado) {
-        // lo mostramos parseado si podemos, o fallback a tabla con datos que ya tenemos
     }
 
     const folio = (cfdi.serie || '') + (cfdi.folio || '');
     const fecha = cfdi.saleCreatedAt ? cfdi.saleCreatedAt.substring(0,16).replace('T',' ') : '';
     const fechaTimbrado = cfdi.fechaTimbrado ? cfdi.fechaTimbrado.substring(0,16).replace('T',' ') : '';
 
-    // Items de la venta
     const itemsHtml = (cfdi.items && cfdi.items.length)
         ? cfdi.items.map(function(i) {
             return '<tr>' +
@@ -547,7 +499,6 @@ function renderComprobanteHtml(cfdi) {
 
     return '<div class="p-4" style="font-family:Arial,sans-serif;font-size:.85rem">' +
 
-        // Encabezado emisor / folio
         '<div class="row mb-3">' +
         '<div class="col-8">' +
         '<div class="fw-bold fs-6">' + (cfdi.nombreReceptor || 'PÚBLICO EN GENERAL') + '</div>' +
@@ -563,7 +514,6 @@ function renderComprobanteHtml(cfdi) {
 
         '<hr>' +
 
-        // Receptor
         '<div class="row mb-3">' +
         '<div class="col-12">' +
         '<div class="bg-light rounded p-2">' +
@@ -573,7 +523,6 @@ function renderComprobanteHtml(cfdi) {
         (cfdi.paymentMethod ? '<div class="small text-muted">Forma de pago: ' + cfdi.paymentMethod + '</div>' : '') +
         '</div></div></div>' +
 
-        // Tabla de conceptos
         '<div class="mb-3">' +
         '<div class="fw-bold text-center bg-dark text-white py-1 rounded-top small">CONCEPTOS</div>' +
         '<div class="table-responsive">' +
@@ -583,7 +532,6 @@ function renderComprobanteHtml(cfdi) {
         '</thead><tbody>' + itemsHtml + '</tbody>' +
         '</table></div></div>' +
 
-        // Totales
         '<div class="row">' +
         '<div class="col-8"></div>' +
         '<div class="col-4">' +
@@ -593,7 +541,6 @@ function renderComprobanteHtml(cfdi) {
         '<tr class="table-success fw-bold"><td>Total</td><td class="text-end">$' + totalMonto.toFixed(2) + '</td></tr>' +
         '</table></div></div>' +
 
-        // Sello SAT info
         '<div class="border rounded p-2 bg-light mt-2" style="font-size:.65rem">' +
         '<div class="text-muted"><strong>RFC Proveedor de Certificación:</strong> STA0903206B9</div>' +
         '<div class="text-muted"><strong>Fecha de timbrado:</strong> ' + fechaTimbrado + '</div>' +
@@ -640,10 +587,7 @@ async function mostrarXml(cfdi) {
     }
 }
 
-// ─── PDF: helpers compartidos ───────────────────────────────────────────────
 
-// Pide el PDF al backend y devuelve una URL temporal en memoria (blob).
-// No guarda nada en disco.
 async function obtenerPdfUrl(uuid) {
     const resp = await fetch(APP_CONFIG.API_BASE + '/cfdi/pdf/' + uuid, {
         headers: { 'Authorization': getAuthHeader() }
@@ -657,7 +601,6 @@ async function obtenerPdfUrl(uuid) {
     return URL.createObjectURL(blob);
 }
 
-// ─── PREVISUALIZAR PDF (sin descargar) ──────────────────────────────────────
 
 window.previsualizarPdfCfdi = async function(uuid, folio) {
     try {
@@ -680,7 +623,6 @@ window.previsualizarPdfCfdi = async function(uuid, folio) {
             showCancelButton: true,
             cancelButtonText: 'Cerrar',
             didDestroy: function() {
-                // Liberar la memoria del blob al cerrar
                 URL.revokeObjectURL(url);
             }
         }).then(function(result) {
@@ -694,7 +636,6 @@ window.previsualizarPdfCfdi = async function(uuid, folio) {
     }
 };
 
-// Vista del PDF dentro del modal de detalle (botón "Ver PDF" del header)
 async function mostrarPdfEnModal(uuid, body) {
     body.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted small">Generando PDF...</p></div>';
     try {
@@ -711,7 +652,6 @@ async function mostrarPdfEnModal(uuid, body) {
     }
 }
 
-// ─── DESCARGAR PDF ──────────────────────────────────────────────────────────
 
 window.descargarPdfCfdi = async function(uuid, folio) {
     try {
@@ -733,7 +673,6 @@ window.descargarPdfCfdi = async function(uuid, folio) {
     }
 };
 
-// ─── COPIAR UUID ────────────────────────────────────────────────────────────
 
 window.copiarUuid = function(uuid) {
     if (navigator.clipboard) {
@@ -749,9 +688,8 @@ window.copiarUuid = function(uuid) {
     }
 };
 
-window.verUuidCfdi = window.copiarUuid; // alias por compatibilidad
+window.verUuidCfdi = window.copiarUuid; 
 
-// ─── CANCELAR CFDI ──────────────────────────────────────────────────────────
 
 window.cancelarCfdiFacturacion = async function(uuid) {
     const result = await Swal.fire({
@@ -788,7 +726,6 @@ window.cancelarCfdiFacturacion = async function(uuid) {
         });
         document.querySelector('#cfdi-tabs .nav-link.active') && document.querySelector('#cfdi-tabs .nav-link.active').click();
     } catch (e) {
-        // Distinguir entre error real y cancelación en proceso
         const msg = e.message || '';
         if (msg.includes('EN PROCESO') || msg.includes('PENDIENTE')) {
             await Swal.fire({
@@ -816,17 +753,12 @@ window.cancelarCfdiFacturacion = async function(uuid) {
     }
 };
 
-// ─── HISTORIAL DE TICKETS DE UNA FACTURA GLOBAL ─────────────────────────────
-// Muestra la cadena de respaldo: Factura Global → tickets → productos.
-// Cada renglón de ticket se expande para ver qué productos se vendieron.
-
 window.verTicketsGlobal = async function(cfdiId, folio) {
     const modal = new bootstrap.Modal(document.getElementById('modal-cfdi'));
     const body = document.getElementById('modal-cfdi-body');
     const titulo = document.getElementById('modal-cfdi-titulo');
     const subtitulo = document.getElementById('modal-cfdi-subtitulo');
 
-    // Ocultar botones de PDF/XML que no aplican a esta vista
     document.getElementById('modal-btn-verpdf').style.display = 'none';
     document.getElementById('modal-btn-pdf').style.display = 'none';
     document.getElementById('modal-btn-xml').style.display = 'none';
@@ -836,7 +768,6 @@ window.verTicketsGlobal = async function(cfdiId, folio) {
     body.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-success"></div><p class="mt-2 text-muted small">Cargando historial de tickets...</p></div>';
     modal.show();
 
-    // Restaurar botones al cerrar
     const modalEl = document.getElementById('modal-cfdi');
     modalEl.addEventListener('hidden.bs.modal', function restaurar() {
         document.getElementById('modal-btn-verpdf').style.display = '';
@@ -866,7 +797,6 @@ function renderHistorialTickets(data) {
         const hora  = t.fecha ? t.fecha.substring(11, 16) : '';
         const numProductos = (t.items || []).length;
 
-        // Sub-tabla de productos del ticket (colapsable)
         const productosHtml = (t.items || []).map(function(i) {
             return '<tr>' +
                 '<td class="text-muted font-monospace" style="font-size:.72rem">' + (i.sku || '') + '</td>' +
@@ -878,7 +808,6 @@ function renderHistorialTickets(data) {
         }).join('');
 
         return '' +
-            // Renglón del ticket
             '<tr class="align-middle" style="cursor:pointer" ' +
             'data-bs-toggle="collapse" data-bs-target="#ticket-det-' + idx + '">' +
             '<td class="ps-3"><i class="bi bi-chevron-down text-muted me-2" style="font-size:.7rem"></i>' +
@@ -890,7 +819,6 @@ function renderHistorialTickets(data) {
             '<td class="text-center"><span class="badge bg-light text-dark border">' + numProductos + '</span></td>' +
             '<td class="text-end fw-bold text-success pe-3">$' + Number(t.total).toFixed(2) + '</td>' +
             '</tr>' +
-            // Detalle colapsable con los productos
             '<tr><td colspan="6" class="p-0 border-0">' +
             '<div class="collapse" id="ticket-det-' + idx + '">' +
             '<div class="bg-light px-4 py-2">' +
@@ -907,7 +835,6 @@ function renderHistorialTickets(data) {
     const fechaTimbrado = data.fechaTimbrado ? data.fechaTimbrado.substring(0, 16).replace('T', ' ') : '';
 
     return '<div class="p-3">' +
-        // Encabezado con datos del CFDI
         '<div class="d-flex justify-content-between align-items-center bg-success-subtle border border-success rounded p-3 mb-3">' +
         '<div>' +
         '<div class="fw-bold text-success"><i class="bi bi-receipt-cutoff me-1"></i>Factura Global ' + ((data.serie || '') + (data.folio || '')) + '</div>' +
@@ -918,7 +845,6 @@ function renderHistorialTickets(data) {
         '<div class="fw-bold fs-4 text-success">$' + Number(data.total || 0).toFixed(2) + '</div>' +
         '<small class="text-muted">' + data.totalTickets + ' ticket(s)</small>' +
         '</div></div>' +
-        // Tabla de tickets
         '<p class="text-muted small mb-2"><i class="bi bi-hand-index me-1"></i>Haz clic en un ticket para ver los productos que se vendieron en él.</p>' +
         '<div class="table-responsive border rounded">' +
         '<table class="table table-hover table-sm align-middle mb-0">' +
@@ -931,14 +857,7 @@ function renderHistorialTickets(data) {
         '</div>';
 }
 
-// ─── FACTURA GLOBAL ─────────────────────────────────────────────────────────
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  PERIODOS — genérico para las 4 periodicidades (Diaria/Semanal/Quincenal/Mensual)
-//  Formato de periodo (igual que el backend): "LETRA:AAAA-MM-DD"
-//    D:2026-08-29  → un día        S:2026-08-24  → una semana (cualquier día de ella)
-//    Q:2026-08-16  → una quincena  M:2026-08-01  → un mes
-// ══════════════════════════════════════════════════════════════════════════════
 const MESES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio',
                   'agosto','septiembre','octubre','noviembre','diciembre'];
 
@@ -947,19 +866,17 @@ function fechaISO(d) {
         + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-// Periodo "ahora" según la periodicidad activa
 function periodoActual(tipoLetra) {
     const d = new Date();
     switch (tipoLetra) {
         case 'D': return 'D:' + fechaISO(d);
-        case 'S': return 'S:' + fechaISO(d); // cualquier día de la semana sirve
-        case 'Q': return 'Q:' + fechaISO(d); // cualquier día de la quincena sirve
+        case 'S': return 'S:' + fechaISO(d); 
+        case 'Q': return 'Q:' + fechaISO(d);
         case 'M': return 'M:' + fechaISO(new Date(d.getFullYear(), d.getMonth(), 1));
         default:  return 'Q:' + fechaISO(d);
     }
 }
 
-// "D:2026-08-29" → "el 29 de agosto de 2026", etc. Autodescriptivo por la letra.
 function etiquetaPeriodo(periodo) {
     if (!periodo) return '';
     const match = periodo.match(/^([DSQM]):(\d{4})-(\d{2})-(\d{2})$/);
@@ -972,7 +889,6 @@ function etiquetaPeriodo(periodo) {
         case 'D':
             return 'el ' + parseInt(dia, 10) + ' de ' + mesNombre + ' de ' + y;
         case 'S': {
-            // Lunes de esa semana
             const diaSemana = fecha.getDay(); // 0=domingo
             const offsetLunes = (diaSemana === 0) ? -6 : (1 - diaSemana);
             const lunes = new Date(fecha); lunes.setDate(fecha.getDate() + offsetLunes);
@@ -998,7 +914,6 @@ function periodoSeleccionado() {
     return (sel && sel.value) ? sel.value : periodoActual(tipoLetra);
 }
 
-// "quincena" / "quincenas", "día" / "días", etc. — según la periodicidad activa
 function nombrePeriodo(plural) {
     const tipo = periodicidadConfig ? periodicidadConfig.periodicidad : 'QUINCENAL';
     const nombres = {
@@ -1010,7 +925,6 @@ function nombrePeriodo(plural) {
     return nombres[tipo] || (plural ? 'quincenas' : 'quincena');
 }
 
-// Genera las últimas ~12 opciones de periodo según la periodicidad activa
 function generarOpcionesPeriodo(tipoLetra) {
     const opciones = [];
     const hoy = new Date();
@@ -1030,19 +944,18 @@ function generarOpcionesPeriodo(tipoLetra) {
             const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
             opciones.push('M:' + fechaISO(d));
         }
-    } else { // Q — quincenal (default)
+    } else { 
         let d = new Date(hoy);
         for (let i = 0; i < 12; i++) {
             const y = d.getFullYear(), m = d.getMonth();
-            opciones.push('Q:' + fechaISO(new Date(y, m, 16))); // 2ª quincena
-            opciones.push('Q:' + fechaISO(new Date(y, m, 1)));  // 1ª quincena
+            opciones.push('Q:' + fechaISO(new Date(y, m, 16))); 
+            opciones.push('Q:' + fechaISO(new Date(y, m, 1))); 
             d.setMonth(d.getMonth() - 1);
         }
     }
     return opciones;
 }
 
-// Llenar el <select> con las últimas opciones de periodo, según la periodicidad activa
 function llenarSelectorPeriodos(select, tipo) {
     const tipoLetra = (periodicidadConfig && periodicidadConfig.periodicidadLetra)
         ? periodicidadConfig.periodicidadLetra
@@ -1051,7 +964,6 @@ function llenarSelectorPeriodos(select, tipo) {
     const actual = periodoActual(tipoLetra);
     let opciones = generarOpcionesPeriodo(tipoLetra);
 
-    // Quitar duplicados y quedarse solo con periodos <= el actual
     opciones = [...new Set(opciones)].filter(o => o <= actual || o === actual);
     opciones.sort().reverse();
 
@@ -1088,9 +1000,7 @@ function renderFacturaGlobalPendiente(div, data) {
         return;
     }
 
-    // esDelPeriodo = pertenece al mes que se está facturando.
-    // Las demás son de meses anteriores que quedaron sin timbrar y van en
-    // SU PROPIA factura global (InformacionGlobal lleva un solo mes).
+    
     const hoy      = data.ventas.filter(v => v.esDelPeriodo);
     const antiguas = data.ventas.filter(v => !v.esDelPeriodo);
 
@@ -1182,7 +1092,6 @@ function renderFacturaGlobalPendiente(div, data) {
     }
     document.querySelectorAll('.vg-check').forEach(c => c.addEventListener('change', actualizarResumen));
 
-    // "Marcar todas" por sección (hoy y antiguas se controlan por separado)
     ['vg-check-hoy', 'vg-check-antiguas'].forEach(idGrupo => {
         const master = document.getElementById(idGrupo);
         if (!master) return;
@@ -1200,8 +1109,6 @@ function renderFacturaGlobalPendiente(div, data) {
     document.getElementById('btn-timbrar-global')
         .addEventListener('click', () => timbrarFacturaGlobal(data));
 
-    // Descartar TODAS las seleccionadas de un jalón (cualquier sección) —
-    // reutiliza el mismo endpoint de descarte individual, en paralelo.
     document.getElementById('vg-descartar-seleccionadas').addEventListener('click', async () => {
         const seleccion = [...document.querySelectorAll('.vg-check:checked')];
         if (!seleccion.length) return;
@@ -1224,7 +1131,6 @@ function renderFacturaGlobalPendiente(div, data) {
         } catch (e) { Swal.fire('Error', e.message, 'error'); }
     });
 
-    // Ver el detalle de un ticket (qué productos se llevó)
     document.querySelectorAll('.vg-detalle').forEach(a => {
         a.addEventListener('click', e => {
             e.preventDefault();
@@ -1234,7 +1140,6 @@ function renderFacturaGlobalPendiente(div, data) {
 
     document.getElementById('btn-prev-global').addEventListener('click', previsualizarGlobal);
 
-    // Descartar UNA venta
     document.querySelectorAll('.vg-descartar').forEach(b => {
         b.addEventListener('click', async () => {
             const r = await Swal.fire({
@@ -1254,7 +1159,6 @@ function renderFacturaGlobalPendiente(div, data) {
         });
     });
 
-    // Descartar TODAS las de días anteriores (atajo específico, sigue existiendo)
     const btnAnt = document.getElementById('vg-descartar-antiguas');
     if (btnAnt) btnAnt.addEventListener('click', async () => {
         const r = await Swal.fire({
@@ -1279,10 +1183,7 @@ function renderFacturaGlobalPendiente(div, data) {
     });
 }
 
-// ─── PREVISUALIZADOR DE LA FACTURA GLOBAL ────────────────────────────────────
-// Muestra el CFDI EXACTAMENTE como se timbrará: un concepto por ticket
-// (regla de la guía SAT), con la misma matemática del backend:
-// base = total/1.16 y IVA = total − base, por venta (cuadre exacto).
+
 function previsualizarGlobal() {
     const sel = [...document.querySelectorAll('.vg-check:checked')];
     if (!sel.length) {
@@ -1354,7 +1255,6 @@ function previsualizarGlobal() {
 }
 
 
-// ─── DETALLE DE UN TICKET (qué se llevó) ─────────────────────────────────────
 async function verDetalleTicket(saleId, folio) {
     Swal.fire({ title: 'Cargando ticket...',
         html: '<div class="spinner-border text-primary"></div>',
@@ -1404,7 +1304,6 @@ async function verDetalleTicket(saleId, folio) {
 }
 
 async function timbrarFacturaGlobal(data) {
-    // Solo las ventas PALOMEADAS en el mini-historial
     const seleccion = [...document.querySelectorAll('.vg-check:checked')];
     const ids  = seleccion.map(c => parseInt(c.value));
     const suma = seleccion.reduce((s, c) => s + Number(c.dataset.total), 0);

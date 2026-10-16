@@ -1,13 +1,8 @@
-// ═════════════════════════════════════════════════════════════════════════════
-//  FALTANTES — módulo propio (separado de Productos)
-//  Todo lo que necesitas para decidir qué reabastecer, en una sola vista:
-//  foto, costo, precio de venta, cuánto hay y cuánto falta.
-// ═════════════════════════════════════════════════════════════════════════════
+
 import { fetchAPI }        from '../services/api.js';
 import { urlImagenCompleta } from '../services/camara.js';
 
-// Mismo mapa de unidades que usa Productos/Ventas (para mostrar "12 pza",
-// "3.5 kg", etc. en vez del número solo)
+
 const UNIDADES_DECIMALES = new Set([
     'MTR','KGM','GRM','LTR','MLT','CMT','MTK','DMT','DMQ','HLT','TNE','MGM','H87P'
 ]);
@@ -146,13 +141,7 @@ document.querySelectorAll('#tabla-faltantes-body tr[data-nombre]').forEach(tr =>
         renderNotasFaltantes();
     });
 
-    // ── Botón "Abastecer" de cada renglón, por DELEGACIÓN ──────────────────
-    // Antes iba con onclick= en el HTML, metiendo el nombre del producto
-    // dentro del atributo. Con la tornillería eso truena: un nombre como
-    //     Tornillo hexagonal G5 1/4" x 1/2"
-    // trae comillas DOBLES, que cierran el atributo a media instrucción y
-    // dejan el botón muerto — sin error visible, simplemente no hace nada.
-    // Con data- attributes el nombre viaja escapado y no puede romper nada.
+   
     document.getElementById('tabla-faltantes-body')
         .addEventListener('click', async e => {
             const btn = e.target.closest('button[data-abastecer]');
@@ -168,7 +157,6 @@ document.querySelectorAll('#tabla-faltantes-body tr[data-nombre]').forEach(tr =>
             );
         });
 
-    // Switch "Ya se pidió" — guarda en localStorage
     document.getElementById('tabla-faltantes-body')
         ?.addEventListener('change', e => {
             const sw = e.target.closest('.falt-sw-pedido');
@@ -182,7 +170,6 @@ document.querySelectorAll('#tabla-faltantes-body tr[data-nombre]').forEach(tr =>
             if (sw.checked) {
                 set.add(id);
                 fila.className = 'falt-row-pedido';
-                // Quitar rojo del botón si era urgente
                 const btnR = fila.querySelector('.btn-danger');
                 if (btnR) btnR.classList.replace('btn-danger', 'btn-outline-success');
                 if (label) { label.textContent = 'Pedido ✓'; label.style.color = '#15803D'; }
@@ -197,7 +184,6 @@ document.querySelectorAll('#tabla-faltantes-body tr[data-nombre]').forEach(tr =>
             guardarPedidos(set);
         });
 
-    // Al surtir, limpiar la marca y recargar
     window.onRestockSuccess = (productId) => {
         if (productId) limpiarPedido(productId);
         if (pestanaFaltActiva === 'catalogo') cargarFaltantes();
@@ -206,10 +192,7 @@ document.querySelectorAll('#tabla-faltantes-body tr[data-nombre]').forEach(tr =>
     cargarFaltantes();
 }
 
-// ─── El modal de reabastecer vive en productos.js ───────────────────────────
-// Ese módulo define window.abrirRestock al cargarse. Si el usuario entró
-// DIRECTO a Faltantes sin pasar por Productos, la función podría no existir
-// todavía. En vez de fallar en silencio, se carga el módulo al vuelo.
+
 async function asegurarRestock() {
     if (typeof window.abrirRestock === 'function') return true;
     try {
@@ -227,9 +210,7 @@ async function asegurarRestock() {
     return false;
 }
 
-// ─── ESTADO "YA PEDIDO" — localStorage ──────────────────────────────────────
-// Sin tocar la base de datos ni el backend.
-// localStorage persiste entre recargas y entre días en la misma PC/navegador.
+
 const FALT_STORAGE_KEY = 'ferrepos_falt_pedidos';
 
 function pedidosGuardados() {
@@ -245,7 +226,6 @@ function limpiarPedido(productId) {
     guardarPedidos(s);
 }
 
-// ─── PESTAÑAS (Faltantes del catálogo / Libreta de apuntes) ─────────────────
 let pestanaFaltActiva = 'catalogo';
 function activarPestanaFaltantes(tab) {
     pestanaFaltActiva = tab;
@@ -397,9 +377,7 @@ async function cargarFaltantes() {
     }
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-//  LIBRETA DE APUNTES — cosas que faltan pero no están en el catálogo
-// ═════════════════════════════════════════════════════════════════════════════
+
 let mostrarResueltasFalt = false;
 
 function inyectarEstiloLibretaFaltantes() {

@@ -3,9 +3,6 @@ import { fmtFecha } from '../services/fechas.js';
 import { SearchSelect } from '../services/searchSelect.js';
 import { sanitizar } from '../services/validaciones.js';
 
-// ─── MAPA SAT → decimales (mismo que productos.js / ventas.js) ───────────────
-// Determina si el producto se compra por fracciones (kg, m, L...) o solo
-// piezas completas (pza, juego, par, caja...).
 const UNIDADES_DECIMALES = new Set([
     'MTR','KGM','GRM','LTR','MLT','CMT','MTK','DMT',
     'DMQ','HLT','TNE','MGM','H87P'
@@ -182,12 +179,6 @@ export function initCompras(container) {
     configurarEventos();
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// AGREGAR FALTANTES DE UN JALÓN
-// El motivo real de casi toda compra es reponer lo que se acabó. En vez de
-// buscar producto por producto, este botón trae todos los que están en o bajo
-// su stock mínimo, con la cantidad ya sugerida para volver a nivel.
-// ══════════════════════════════════════════════════════════════════════════════
 
 let faltantesCache = [];
 
@@ -206,7 +197,7 @@ async function contarFaltantes() {
             badge.textContent = faltantesCache.length > 99 ? '99+' : faltantesCache.length;
             badge.style.display = 'inline-block';
         }
-    } catch (e) { /* sin conexión: el botón sigue, solo sin globito */ }
+    } catch (e) {  }
 }
 
 async function agregarFaltantes() {
@@ -218,17 +209,15 @@ async function agregarFaltantes() {
         return;
     }
 
-    // Si ya hay proveedor elegido, se sugiere su último costo conocido
     let costosProveedor = {};
-    const supplierId = proveedorElegido;   // guarda el id directamente
+    const supplierId = proveedorElegido;   
     if (supplierId) {
         try {
             const sps = await fetchAPI(`/suppliers/${supplierId}/products`);
             sps.forEach(sp => costosProveedor[sp.productId] = Number(sp.lastCost) || 0);
-        } catch (e) { /* sin historial con ese proveedor */ }
+        } catch (e) {  }
     }
 
-    // Cantidad sugerida: lo que falta para volver al mínimo, con un colchón de 1
     const sugeridos = faltantesCache.map(p => {
         const stock = parseFloat(p.currentStock) || 0;
         const min   = parseFloat(p.minStockLevel) || 0;
@@ -299,11 +288,10 @@ async function agregarFaltantes() {
     r.value.forEach(i => {
         const s = sugeridos[i];
         const yaEsta = itemsCompra.find(it => it.productId === s.p.id);
-        if (yaEsta) return;   // no duplicar lo que ya pusiste a mano
+        if (yaEsta) return;   
         agregarItemCompra(
             s.p.id, s.p.name, s.p.sku, s.costo,
             s.p.satClaveUnidad, s.p.price, s.p.imagenUrl);
-        // Ajustar a la cantidad sugerida (agregarItemCompra entra con 1)
         const item = itemsCompra.find(it => it.productId === s.p.id);
         if (item) {
             item.cantidad = s.cantidad;
@@ -339,15 +327,8 @@ function configurarEventos() {
 }
 
 
-// ═════════════════════════════════════════════════════════════════════════════
-//  SUGERENCIA DE COMPRA — stock bajo agrupado por proveedor asignado
-//  Cantidades editables · imprimir por proveedor · copiar texto (WhatsApp)
-// ═════════════════════════════════════════════════════════════════════════════
 async function mostrarSugerenciaCompra() {
-    // Dos formas de ver lo mismo:
-    //  A) Por urgencia  → lo que está bajo mínimo, repartido por proveedor
-    //  B) Por proveedor → eliges UN proveedor y ves TODO su catálogo con
-    //     urgencia (para aprovechar el envío incluyendo lo que va cerca)
+    
     const modo = await Swal.fire({
         title: 'Sugerencia de compra',
         input: 'radio',
@@ -465,8 +446,7 @@ async function mostrarSugerenciaCompra() {
                         `.sug-cant[data-g="${b.dataset.g}"]`)].map((inp, i) => {
                         const p = g.productos[i];
                         const c = parseFloat(inp.value) || 0;
-                        // Prioriza el código de fabricante (así pide el proveedor);
-                        // si no hay, usa el código del distribuidor.
+                        
                         const cod = inp.dataset.codfab || p.supplierSku || '';
                         return c > 0 ? `• ${c} x ${p.name}` +
                             (cod ? ` [${cod}]` : '') : null;
@@ -507,8 +487,6 @@ async function mostrarSugerenciaCompra() {
     });
 }
 
-
-// ─── SUGERENCIA POR PROVEEDOR (parte del proveedor, ve todo su catálogo) ─────
 async function sugerenciaPorProveedor() {
     let proveedores;
     try { proveedores = (await fetchAPI('/suppliers')).filter(s => s.active !== false); }
@@ -633,7 +611,6 @@ async function sugerenciaPorProveedor() {
     });
 }
 
-// ─── PROVEEDOR ────────────────────────────────────────────────────────────────
 async function cargarProveedores() {
     try {
         const proveedores = await fetchAPI('/suppliers?active=true');
@@ -696,7 +673,6 @@ window._agregarDesdeHistorial = (id, nombre, sku, ultimoCosto, precioVentaActual
     agregarItemCompra(id, nombre, sku, ultimoCosto, claveSat || 'H87', precioVentaActual, imagenUrl);
 };
 
-// ─── BUSCAR PRODUCTOS ─────────────────────────────────────────────────────────
 async function buscarProductos(termino) {
     const dropdown = document.getElementById('resultados-prod-compra');
     dropdown.innerHTML = `<div class="search-empty">
@@ -757,17 +733,16 @@ function agregarItemCompra(id, nombre, sku, costoSugerido, claveSat, precioVenta
             productId: id, nombre, sku,
             cantidad: 1, costo: parseFloat(costoSugerido) || 0,
             subtotal: parseFloat(costoSugerido) || 0,
-            precioVenta: null,   // opcional: si se llena, también actualiza el precio de venta
-            precioVentaActual: parseFloat(precioVentaActual) || 0, // precio que el producto ya tiene
+            precioVenta: null,   
+            precioVentaActual: parseFloat(precioVentaActual) || 0, 
             claveSat: claveSat || 'H87',
-            esDecimal: dec,   // true = acepta fracciones (kg, m, L...); false = solo piezas enteras
+            esDecimal: dec,   
             imagenUrl: imagenUrl || null
         });
     }
     renderItemsCompra();
 }
 
-// ─── RENDER ITEMS ─────────────────────────────────────────────────────────────
 function renderItemsCompra() {
     const tbody = document.getElementById('items-compra-body');
     if (!itemsCompra.length) {
@@ -782,13 +757,9 @@ function renderItemsCompra() {
     tbody.innerHTML = itemsCompra.map((item, idx) => {
         const etq = etiqueta(item.claveSat);
 
-        // Caso 1: capturaste precio de venta nuevo, pero quedó por debajo del costo
         const precioNuevoMenorQueCosto = item.precioVenta !== null &&
             item.precioVenta < item.costo;
 
-        // Caso 2: NO capturaste precio nuevo, y el costo nuevo superó el precio
-        // de venta que el producto ya tenía — esto bloquea la compra en el backend,
-        // así que lo marcamos en rojo aquí mismo para que se note antes de enviar.
         const costoSuperaPrecioActual = item.precioVenta === null &&
             item.precioVentaActual > 0 && item.costo > item.precioVentaActual;
 
@@ -892,7 +863,6 @@ window._actualizarCantCompra = (idx, val) => {
     const cant = parseFloat(val);
     if (isNaN(cant) || cant <= 0) { renderItemsCompra(); return; }
 
-    // Si el producto se vende por pieza completa, no acepta cantidades fraccionarias
     if (!item.esDecimal && !Number.isInteger(cant)) {
         Swal.fire({ icon:'warning', title:'Solo cantidades enteras',
             text:`"${item.nombre}" se compra por pieza completa, no por fracciones.`,
@@ -914,7 +884,6 @@ window._actualizarCostoCompra = (idx, val) => {
     renderItemsCompra();
 };
 
-// Campo opcional: si se deja vacío, el precio de venta del producto no cambia.
 window._actualizarPrecioVentaCompra = (idx, val) => {
     const valTrim = val.trim();
     if (!valTrim) {
@@ -939,7 +908,6 @@ window._eliminarItemCompra = (idx) => {
     renderItemsCompra();
 };
 
-// ─── SELECCIÓN MÚLTIPLE — quitar varios productos de la compra actual ────────
 function actualizarBarraSeleccionCompra() {
     const barra = document.getElementById('btn-quitar-seleccionados-compra');
     const cnt   = document.getElementById('cnt-seleccionados-compra');
@@ -964,7 +932,7 @@ function configurarSeleccionMultipleCompra() {
     document.getElementById('btn-quitar-seleccionados-compra').addEventListener('click', () => {
         const idxs = [...tbody.querySelectorAll('.item-compra-check:checked')]
             .map(c => parseInt(c.dataset.idx))
-            .sort((a, b) => b - a);   // de mayor a menor para no correr los índices al hacer splice
+            .sort((a, b) => b - a);  
         if (!idxs.length) return;
         idxs.forEach(i => itemsCompra.splice(i, 1));
         renderItemsCompra();
@@ -981,7 +949,6 @@ function actualizarBotonRegistrar() {
     btn.disabled = !(proveedorElegido && itemsCompra.length > 0);
 }
 
-// ─── REGISTRAR COMPRA ─────────────────────────────────────────────────────────
 async function registrarCompra() {
     if (!proveedorElegido || !itemsCompra.length) return;
 
@@ -994,9 +961,6 @@ async function registrarCompra() {
         return;
     }
 
-    // BLOQUEO DURO: el costo nuevo no puede superar el precio de venta vigente
-    // si no se capturó un precio de venta nuevo. A diferencia del caso de abajo,
-    // esto no se puede "continuar de todas formas" — hay que corregir el precio.
     const costoSuperaVenta = itemsCompra.filter(i =>
         i.precioVenta === null && i.precioVentaActual > 0 && i.costo > i.precioVentaActual);
     if (costoSuperaVenta.length) {
@@ -1015,7 +979,6 @@ async function registrarCompra() {
         return;
     }
 
-    // Validación: si se capturó precio de venta, no puede ser menor al costo
     const precioMenorCosto = itemsCompra.filter(i =>
         i.precioVenta !== null && i.precioVenta < i.costo);
     if (precioMenorCosto.length) {
@@ -1080,7 +1043,7 @@ async function registrarCompra() {
                 productId: i.productId,
                 quantity: i.cantidad,
                 unitCost: i.costo,
-                newListPrice: i.precioVenta   // null si no se capturó — el backend no lo toca
+                newListPrice: i.precioVenta   
             }))
         };
         const orden = await fetchAPI('/purchase-orders', { method:'POST', body:payload });
@@ -1126,7 +1089,6 @@ function limpiarCompra() {
     renderItemsCompra();
 }
 
-// ─── HISTORIAL DE COMPRAS ─────────────────────────────────────────────────────
 async function mostrarHistorialCompras() {
     Swal.fire({
         title: '<i class="bi bi-clock-history me-2"></i>Historial de Compras',

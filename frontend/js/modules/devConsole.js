@@ -1,11 +1,4 @@
-// ═════════════════════════════════════════════════════════════════════════════
-//  CONSOLA DE DESARROLLO — SQL directo contra PostgreSQL (estilo pgAdmin)
-//  Solo visible/accesible para el rol ADMIN (dueño). Control total: SELECT,
-//  INSERT, UPDATE, DELETE, DDL... la misma potencia que pgAdmin.
-//
-//  ⚠️ Sin las validaciones de negocio del resto del sistema. Cada ejecución
-//  de cambio pide confirmación explícita y queda registrada en el historial.
-// ═════════════════════════════════════════════════════════════════════════════
+
 import { fetchAPI } from '../services/api.js';
 
 let _tablasEsquema = [];
@@ -126,7 +119,6 @@ Ctrl+Enter para ejecutar"></textarea>
     document.getElementById('dev-sql').focus();
 }
 
-// ─── AMBIENTE FEL: producción ↔ pruebas, en caliente ─────────────────────────
 async function cargarAmbienteFel() {
     const info = document.getElementById('dev-ambiente-fel-actual');
     try {
@@ -182,7 +174,6 @@ async function cambiarAmbienteFel(destino) {
     }
 }
 
-// ─── EJECUTAR ─────────────────────────────────────────────────────────────────
 async function ejecutarConsulta() {
     const sql = document.getElementById('dev-sql').value.trim();
     if (!sql) return;
@@ -190,7 +181,6 @@ async function ejecutarConsulta() {
     const primeraPalabra = sql.split(/\s+/)[0].toUpperCase();
     const esLectura = ['SELECT', 'SHOW', 'EXPLAIN', 'WITH'].includes(primeraPalabra);
 
-    // Confirmación explícita para cualquier cosa que NO sea solo lectura
     if (!esLectura) {
         const r = await Swal.fire({
             title: '¿Ejecutar este cambio?',
@@ -264,7 +254,6 @@ function formatearValor(v) {
     return escaparHtml(String(v));
 }
 
-// ─── ESQUEMA (tablas y columnas) ──────────────────────────────────────────────
 async function cargarEsquema() {
     const cont = document.getElementById('dev-lista-tablas');
     try {
@@ -300,7 +289,6 @@ async function cargarEsquema() {
     }
 }
 
-// ─── HISTORIAL ────────────────────────────────────────────────────────────────
 async function cargarHistorial() {
     const cont = document.getElementById('dev-historial');
     try {
